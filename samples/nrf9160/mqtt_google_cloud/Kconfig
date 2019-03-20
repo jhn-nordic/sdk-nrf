@@ -1,0 +1,101 @@
+#
+# Copyright (c) 2018 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-BSD-5-Clause-Nordic
+#
+
+menu "MQTT simple sample"
+config MQTT_PUB_TOPIC
+	string "MQTT publish topic"
+	default "/devices/my-device/events"
+
+config MQTT_SUB_TOPIC
+	string "MQTT subscribe topic"
+	default "/devices/my-device/commands/#"
+
+config MQTT_CLIENT_ID
+	string "MQTT Client ID"
+	default "projects/weather-station-tutorial/locations/us-central1/registries/weather-station-registry/devices/my-device"
+
+config MQTT_BROKER_HOSTNAME
+	string "MQTT broker hostname"
+	default "mqtt.googleapis.com"
+
+config MQTT_BROKER_PORT
+	int "MQTT broker port"
+	default 8883
+
+config MQTT_MESSAGE_BUFFER_SIZE
+	int ""
+	default 1024
+
+config MQTT_PAYLOAD_BUFFER_SIZE
+	int ""
+	default 1024
+
+config CLOUD_AUDIENCE
+	string "Google cloud audience"
+	default "weather-station-tutorial"
+
+
+choice
+	prompt "Temperature measurement device"
+	default TEMP_USE_SIM
+	help
+		Select which device will provide temperature data.
+
+config TEMP_USE_SIM
+	bool "Use simulated temperature data"
+	select SENSOR
+	select SENSOR_SIM
+	help
+		Use sensor simulator to generate temperature data to send to
+		nRF Cloud.
+
+config TEMP_USE_EXTERNAL
+	bool "User provided temperature device"
+	help
+		The user provides a temperature device that is
+		used for temperature measurement.
+
+endchoice
+
+if TEMP_USE_SIM
+config TEMP_DEV_NAME
+	string
+	default SENSOR_SIM_DEV_NAME
+
+config TEMP_TRIGGER
+	bool
+	default SENSOR_SIM_TRIGGER
+
+config TEMP_SIM_BUTTON
+	int "Button or switch to trigger 'data ready' event"
+	range 1 4 if BOARD_NRF9160_PCA10090NS
+	range 1 1 if BOARD_NRF9160_PCA20035NS
+	default 3 if BOARD_NRF9160_PCA10090NS
+	default 1 if BOARD_NRF9160_PCA20035NS
+	help
+		Button or switch number to use for triggering
+		a 'data ready' event.
+		1 - Button 1
+		2 - Button 2
+		3 - Switch 1
+		4 - Switch 2
+endif
+
+if TEMP_USE_EXTERNAL
+
+config TEMP_DEV_NAME
+	string "Temperature device name"
+	help
+		Device from which temperature data will be fetched and
+		sent to nRF Cloud.
+
+endif
+
+endmenu
+
+menu "Zephyr Kernel"
+source "$ZEPHYR_BASE/Kconfig.zephyr"
+endmenu
