@@ -19,7 +19,130 @@
 #include <console.h>
 #include "ntp.h"
 #include <sensor.h>
+#include "bsec_interface.h"
 
+#define TEMP_FROM_EXT_HEAT_SOURCE	0.0f
+
+static float iaq, temperature, pressure, humidity, gas_resistance, raw_temperature, raw_humidity;
+static u8_t iaq_accuracy;
+
+static bsec_library_return_t update_subscription(bsec_virtual_sensor_t *sensor_list, u8_t n_sensors, float sample_rate)
+{
+	bsec_sensor_configuration_t virtual_sensors[BSEC_NUMBER_OUTPUTS],
+	                sensor_settings[BSEC_MAX_PHYSICAL_SENSOR];
+	u8_t n_virtual_sensors = 0,
+	                n_sensor_settings = BSEC_MAX_PHYSICAL_SENSOR;
+
+	for (u8_t i = 0; i < n_sensors; i++) {
+		virtual_sensors[n_virtual_sensors].sensor_id = sensor_list[i];
+		virtual_sensors[n_virtual_sensors].sample_rate = sample_rate;
+		n_virtual_sensors++;
+	}
+
+	return bsec_update_subscription(virtual_sensors, n_virtual_sensors,
+	                sensor_settings, &n_sensor_settings);
+}
+
+static bsec_library_return_t run(struct device *dev, s32_t *snooze_dur)
+{
+	bsec_library_return_t bsec_ret = BSEC_OK;
+	bsec_bme_settings_t bme680_settings;
+	struct sensor_value temp, pres, hum, gas_res;
+
+	s64_t uptime = k_uptime_get();
+
+	s64_t call_time_ns = uptime * 1000000LL;
+
+	bsec_ret = bsec_sensor_control(call_time_ns, &bme680_settings);
+	if (bsec_ret < BSEC_OK) /* If there is an error. Ignore warnings */
+		return bsec_ret;
+
+	if (bme680_settings.process_data) {
+		sensor_sample_fetch(dev);
+
+		sensor_channel_get(dev, SENSOR_CHAN_AMBIENT_TEMP, &temp);
+		sensor_channel_get(dev, SENSOR_CHAN_PRESS, &pres);
+		sensor_channel_get(dev, SENSOR_CHAN_HUMIDITY, &hum);
+		sensor_channel_get(dev, SENSOR_CHAN_GAS_RES, &gas_res);
+	}
+
+	bsec_input_t inputs[BSEC_MAX_PHYSICAL_SENSOR];
+	u8_t n_inputs = 0, n_outputs = 0;
+
+	if (bme680_settings.process_data & BSEC_PROCESS_TEMPERATURE) {
+		inputs[n_inputs].sensor_id = BSEC_INPUT_TEMPERATURE;
+		inputs[n_inputs].signal = temp.val1 + temp.val2 / 1000000.0f;
+		inputs[n_inputs].time_stamp = call_time_ns;
+		n_inputs++;
+		/* Temperature offset from the real temperature due to external heat sources */
+		inputs[n_inputs].sensor_id = BSEC_INPUT_HEATSOURCE;
+		inputs[n_inputs].signal = TEMP_FROM_EXT_HEAT_SOURCE;
+		inputs[n_inputs].time_stamp = call_time_ns;
+		n_inputs++;
+	}
+	if (bme680_settings.process_data & BSEC_PROCESS_HUMIDITY) {
+		inputs[n_inputs].sensor_id = BSEC_INPUT_HUMIDITY;
+		inputs[n_inputs].signal = hum.val1 + hum.val2 / 1000000.0f;
+		inputs[n_inputs].time_stamp = call_time_ns;
+		n_inputs++;
+	}
+	if (bme680_settings.process_data & BSEC_PROCESS_PRESSURE) {
+		inputs[n_inputs].sensor_id = BSEC_INPUT_PRESSURE;
+		inputs[n_inputs].signal = pres.val1 + pres.val2 / 1000000.0f;
+		inputs[n_inputs].time_stamp = call_time_ns;
+		n_inputs++;
+	}
+	if (bme680_settings.process_data & BSEC_PROCESS_GAS) {
+		inputs[n_inputs].sensor_id = BSEC_INPUT_GASRESISTOR;
+		inputs[n_inputs].signal = gas_res.val1 + gas_res.val2 / 1000000.0f;
+		inputs[n_inputs].time_stamp = call_time_ns;
+		n_inputs++;
+	}
+
+	if (n_inputs > 0) {
+		n_outputs = BSEC_NUMBER_OUTPUTS;
+		bsec_output_t outputs[BSEC_NUMBER_OUTPUTS];
+
+		bsec_ret = bsec_do_steps(inputs, n_inputs, outputs, &n_outputs);
+		if (bsec_ret != BSEC_OK)
+			return bsec_ret;
+
+		if (n_outputs > 0) {
+			for (u8_t i = 0; i < n_outputs; i++) {
+				switch (outputs[i].sensor_id) {
+				case BSEC_OUTPUT_IAQ:
+					iaq = outputs[i].signal;
+					iaq_accuracy = outputs[i].accuracy;
+					break;
+				case BSEC_OUTPUT_RAW_TEMPERATURE:
+					raw_temperature = outputs[i].signal;
+					break;
+				case BSEC_OUTPUT_RAW_PRESSURE:
+					pressure = outputs[i].signal;
+					break;
+				case BSEC_OUTPUT_RAW_HUMIDITY:
+					raw_humidity = outputs[i].signal;
+					break;
+				case BSEC_OUTPUT_RAW_GAS:
+					gas_resistance = outputs[i].signal;
+					break;
+				case BSEC_OUTPUT_SENSOR_HEAT_COMPENSATED_TEMPERATURE:
+					temperature = outputs[i].signal;
+					break;
+				case BSEC_OUTPUT_SENSOR_HEAT_COMPENSATED_HUMIDITY:
+					humidity = outputs[i].signal;
+					break;
+				default:
+					break;
+				}
+			}
+		}
+	}
+
+	*snooze_dur = (bme680_settings.next_call / 1000000LL) - k_uptime_get();
+
+	return bsec_ret;
+}
 #define MQTT_INPUT_PERIOD K_SECONDS(1)
 #define MQTT_LIVE_PERIOD K_SECONDS(55)
 
@@ -624,6 +747,7 @@ static void get_and_send_env_data(void) {
 }
 void main(void)
 {
+		char send_str[200];
 	int err;
 	//IF YOU NEED TO WRITE CERTIFICATE
 	//set_certificate();
@@ -634,7 +758,42 @@ void main(void)
 	
 	buttons_leds_init();
 	modem_configure();
-	env_sensor_init();
+	//env_sensor_init();
+	struct device *dev = device_get_binding("BME680");
+	s32_t snooze_dur;
+
+	printf("dev %p name %s\n", dev, dev->config->name);
+
+	bsec_library_return_t bsec_ret;
+	bsec_version_t bsec_ver;
+	bsec_virtual_sensor_t subscription[4] = {
+	                BSEC_OUTPUT_SENSOR_HEAT_COMPENSATED_TEMPERATURE,
+	                BSEC_OUTPUT_SENSOR_HEAT_COMPENSATED_HUMIDITY,
+	                BSEC_OUTPUT_IAQ,
+	                BSEC_OUTPUT_RAW_PRESSURE
+	};
+
+	bsec_ret = bsec_init();
+	if (bsec_ret) {
+		printf("BSEC Error: %d\n", bsec_ret);
+		return;
+	}
+
+	bsec_ret = bsec_get_version(&bsec_ver);
+	if (bsec_ret) {
+		printf("BSEC Error: %d\n", bsec_ret);
+		return;
+	}
+
+	printf("BSEC v%d.%d.%d.%d initialized.\n", bsec_ver.major, bsec_ver.minor, bsec_ver.major_bugfix,
+	                bsec_ver.minor_bugfix);
+
+	bsec_ret = update_subscription(subscription, 4, BSEC_SAMPLE_RATE_LP);
+	if (bsec_ret) {
+		printf("BSEC Error: %d\n", bsec_ret);
+		return;
+	}
+
 	time_base=get_unix_time();
 	printk("NTP time: %s", ctime((time_t *)&time_base));
 	client_init(&client);
@@ -660,8 +819,40 @@ void main(void)
 	dk_set_leds(4);
 		k_sleep(K_MSEC(200));
 		dk_set_leds(0);
+int cnt=0;
+	while (1) {
+		bsec_ret = run(dev, &snooze_dur);
+		if (bsec_ret) {
+			printf("BSEC Error: %d\n", bsec_ret);
+			return;
+		}
 
-	while(1)
+		//printf("t: %d, T: %.2f; P: %.2f; H: %.2f; IAQ: %.2f; Acc: %d\n", k_uptime_get_32(), temperature,
+		//                pressure, humidity, iaq, iaq_accuracy);
+
+		cnt++;
+		if(cnt>=20)
+		{
+			time_t current_time=get_unix_time();
+			char time_s[40];
+			sprintf(time_s, "\"timestamp\" : \"%lld\"", current_time);
+			sprintf(send_str, "{ \"temp\" : %.2f , \"pres\" : %.2f , \"hum\" : %.2f ,  \"iaq\" : %.2f , \"iaq_acc\" : %d ,  %s }", temperature, pressure, humidity, iaq, iaq_accuracy,time_s);
+			err = data_publish(&client, MQTT_QOS_1_AT_LEAST_ONCE,
+				send_str, strlen(send_str));
+			if(err<0)
+			{
+				printk("error when publishing\r\n");
+			}
+			dk_set_leds(2);
+			k_sleep(K_MSEC(200));
+			dk_set_leds(0);
+			cnt=0;
+		}
+		
+		k_sleep(snooze_dur);
+		
+	}
+	while(0)
 	{
 		k_sleep(K_SECONDS(60));
 		get_and_send_env_data();
