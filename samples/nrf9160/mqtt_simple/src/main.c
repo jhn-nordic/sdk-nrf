@@ -13,6 +13,8 @@
 #include <net/socket.h>
 #include <lte_lc.h>
 
+#include <net/cloud.h>
+
 /* Buffers for MQTT client. */
 static u8_t rx_buffer[CONFIG_MQTT_MESSAGE_BUFFER_SIZE];
 static u8_t tx_buffer[CONFIG_MQTT_MESSAGE_BUFFER_SIZE];
