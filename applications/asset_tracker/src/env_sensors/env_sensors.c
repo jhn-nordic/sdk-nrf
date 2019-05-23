@@ -57,19 +57,9 @@ static struct env_sensor *env_sensors[] = {
 	&pressure_sensor
 };
 
-/**@brief Initialize environment sensors. */
-int env_sensors_init(void)
-{
-	for (int i = 0; i < ARRAY_SIZE(env_sensors); i++) {
-		env_sensors[i]->dev =
-			device_get_binding(env_sensors[i]->dev_name);
-		__ASSERT(env_sensors[i]->dev, "Could not get device %s\n",
-			env_sensors[i]->dev_name);
-	}
-	return 0;
-}
+static struct k_delayed_work env_sensors_poller;
 
-int env_sensors_start_polling(void)
+static void env_sensors_poll_fn(struct k_work *work)
 {
 	int num_sensors = ARRAY_SIZE(env_sensors);
 	struct sensor_value data[num_sensors];
@@ -82,7 +72,6 @@ int env_sensors_start_polling(void)
 		if (err) {
 			printk("Failed to fetch data from %s, error: %d\n",
 				env_sensors[i]->dev_name, err);
-			return err;
 		}
 
 		err = sensor_channel_get(env_sensors[i]->dev,
@@ -90,11 +79,31 @@ int env_sensors_start_polling(void)
 		if (err) {
 			printk("Failed to fetch data from %s, error: %d\n",
 				env_sensors[i]->dev_name, err);
-			return err;
 		}
 		env_sensors[i]->sensor.value=sensor_value_to_double(&data[i]);
 	}
+	
+	 k_delayed_work_submit(&env_sensors_poller, K_SECONDS(10));
+}
+/**@brief Initialize environment sensors. */
+int env_sensors_init(void)
+{
+	for (int i = 0; i < ARRAY_SIZE(env_sensors); i++) {
+		env_sensors[i]->dev =
+			device_get_binding(env_sensors[i]->dev_name);
+		__ASSERT(env_sensors[i]->dev, "Could not get device %s\n",
+			env_sensors[i]->dev_name);
+	}
+
+	k_delayed_work_init(&env_sensors_poller, env_sensors_poll_fn);
+	env_sensors_poll_fn(NULL);
+
 	return 0;
+}
+
+int env_sensors_start_polling(void)
+{
+	return k_delayed_work_submit(&env_sensors_poller, K_SECONDS(10));
 }
 
 int env_sensors_get_temperature(env_sensor_data_t *sensor_data, u64_t *sensor_id)
