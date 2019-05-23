@@ -14,6 +14,8 @@
 #define CLOUD_CODEC_H__
 
 #include <nrf_cloud.h>
+#include <net/cloud.h>
+#include "env_sensor_api.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -59,7 +61,10 @@ struct cloud_sensor_data {
 };
 
 int cloud_encode_sensor_data(const struct cloud_sensor_data *sensor,
-				 struct cloud_data *output);
+				 struct cloud_msg *output);
+
+int cloud_encode_env_sensors_data(const env_sensor_data_t *sensor_data,
+				  struct cloud_msg *output);
 
 #ifdef __cplusplus
 }
