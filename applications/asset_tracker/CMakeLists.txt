@@ -18,5 +18,7 @@ zephyr_include_directories(src)
 
 include_directories(src/orientation_detector)
 target_sources(app PRIVATE src/orientation_detector/orientation_detector.c)
+include_directories(src/env_sensors)
+target_sources(app PRIVATE src/env_sensors/env_sensors.c)
 include_directories(src/cloud_codec)
 target_sources(app PRIVATE src/cloud_codec/cloud_codec.c)
