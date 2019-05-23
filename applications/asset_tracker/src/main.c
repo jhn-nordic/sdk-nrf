@@ -427,47 +427,44 @@ static void device_status_send(struct k_work *work)
 static void env_data_send(void)
 {
 	int err;
+	env_sensor_data_t env_data;
+	struct cloud_msg msg = {
+		.qos = CLOUD_QOS_AT_MOST_ONCE
+	};
+
 	if (!atomic_get(&send_data_enable)) {
 		return;
 	}
 
-	if(env_sensors_start_polling()==0)//not needed when sensors poll under the hood
-	{
-		env_sensor_data_t env_data;
-		struct cloud_msg msg = {
-			.qos = CLOUD_QOS_AT_MOST_ONCE
-		};
-
-		if(env_sensors_get_temperature(&env_data, NULL) == 0) {
-			if(cloud_encode_env_sensors_data(&env_data, &msg) == 0)
-			{
-				err = cloud_send(cloud_backend, &msg);
-				k_free(msg.payload);
-				if (err) {
-					goto error;
-				}
+	if(env_sensors_get_temperature(&env_data, NULL) == 0) {
+		if(cloud_encode_env_sensors_data(&env_data, &msg) == 0)
+		{
+			err = cloud_send(cloud_backend, &msg);
+			k_free(msg.payload);
+			if (err) {
+				goto error;
 			}
 		}
+	}
 
-		if(env_sensors_get_humidity(&env_data, NULL) == 0) {
-			if(cloud_encode_env_sensors_data(&env_data, &msg) == 0)
-			{
-				err = cloud_send(cloud_backend, &msg);
-				k_free(msg.payload);
-				if (err) {
-					goto error;
-				}
+	if(env_sensors_get_humidity(&env_data, NULL) == 0) {
+		if(cloud_encode_env_sensors_data(&env_data, &msg) == 0)
+		{
+			err = cloud_send(cloud_backend, &msg);
+			k_free(msg.payload);
+			if (err) {
+				goto error;
 			}
 		}
+	}
 
-		if(env_sensors_get_pressure(&env_data, NULL) == 0) {
-			if(cloud_encode_env_sensors_data(&env_data, &msg) == 0)
-			{
-				err = cloud_send(cloud_backend, &msg);
-				k_free(msg.payload);
-				if (err) {
-					goto error;
-				}
+	if(env_sensors_get_pressure(&env_data, NULL) == 0) {
+		if(cloud_encode_env_sensors_data(&env_data, &msg) == 0)
+		{
+			err = cloud_send(cloud_backend, &msg);
+			k_free(msg.payload);
+			if (err) {
+				goto error;
 			}
 		}
 	}
@@ -818,6 +815,8 @@ static void sensors_init(void)
 	gps_init();
 	flip_detection_init();
 	env_sensors_init();
+	env_sensors_start_polling();
+
 	
 #if CONFIG_MODEM_INFO
 	modem_data_init();
@@ -836,6 +835,7 @@ static void sensors_init(void)
 	/* Send sensor data after initialization, as it may be a long time until
 	 * next time if the application is in power optimized mode.
 	 */
+	
 	env_data_send();
 }
 
