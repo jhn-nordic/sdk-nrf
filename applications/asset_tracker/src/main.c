@@ -117,7 +117,7 @@ static enum {
 } display_state;
 
 struct env_sensor {
-	enum cloud_sensor type;
+	enum cloud_channel type;
 	enum sensor_channel channel;
 	u8_t *dev_name;
 	struct device *dev;
@@ -139,19 +139,19 @@ static struct rsrp_data rsrp = {
 static struct cloud_backend *cloud_backend;
 
 static struct env_sensor temp_sensor = {
-	.type = CLOUD_SENSOR_TEMP,
+	.type = CLOUD_CHANNEL_TEMP,
 	.channel = SENSOR_CHAN_AMBIENT_TEMP,
 	.dev_name = CONFIG_TEMP_DEV_NAME
 };
 
 static struct env_sensor humid_sensor = {
-	.type = CLOUD_SENSOR_HUMID,
+	.type = CLOUD_CHANNEL_HUMID,
 	.channel = SENSOR_CHAN_HUMIDITY,
 	.dev_name = CONFIG_TEMP_DEV_NAME
 };
 
 static struct env_sensor pressure_sensor = {
-	.type = CLOUD_SENSOR_AIR_PRESS,
+	.type = CLOUD_CHANNEL_AIR_PRESS,
 	.channel = SENSOR_CHAN_PRESS,
 	.dev_name = CONFIG_TEMP_DEV_NAME
 };
@@ -165,13 +165,13 @@ static struct env_sensor *env_sensors[] = {
 
 /* Sensor data */
 static struct gps_data nmea_data;
-static struct cloud_sensor_data flip_cloud_data;
-static struct cloud_sensor_data gps_cloud_data;
-static struct cloud_sensor_data button_cloud_data;
-static struct cloud_sensor_data env_cloud_data[ARRAY_SIZE(env_sensors)];
+static struct cloud_channel_data flip_cloud_data;
+static struct cloud_channel_data gps_cloud_data;
+static struct cloud_channel_data button_cloud_data;
+static struct cloud_channel_data env_cloud_data[ARRAY_SIZE(env_sensors)];
 #if CONFIG_MODEM_INFO
-static struct cloud_sensor_data signal_strength_cloud_data;
-static struct cloud_sensor_data device_cloud_data;
+static struct cloud_channel_data signal_strength_cloud_data;
+static struct cloud_channel_data device_cloud_data;
 #endif /* CONFIG_MODEM_INFO */
 static atomic_val_t send_data_enable = 1;
 
@@ -205,7 +205,7 @@ static void flip_send(struct k_work *work);
 static void env_data_send(void);
 static void sensors_init(void);
 static void work_init(void);
-static void sensor_data_send(struct cloud_sensor_data *data);
+static void sensor_data_send(struct cloud_channel_data *data);
 static void leds_update(struct k_work *work);
 
 /**@brief nRF Cloud error handler. */
@@ -410,6 +410,10 @@ exit:
 	}
 }
 
+static void cloud_cmd_handler(struct cloud_command *cmd) {
+	/* Command handling goes here. */
+}
+
 #if CONFIG_MODEM_INFO
 /**@brief Callback handler for LTE RSRP data. */
 static void modem_rsrp_handler(char rsrp_value)
@@ -556,7 +560,7 @@ static void leds_update(struct k_work *work)
 }
 
 /**@brief Send sensor data to nRF Cloud. **/
-static void sensor_data_send(struct cloud_sensor_data *data)
+static void sensor_data_send(struct cloud_channel_data *data)
 {
 	int err = 0;
 	struct cloud_data output;
@@ -565,7 +569,7 @@ static void sensor_data_send(struct cloud_sensor_data *data)
 		return;
 	}
 
-	err = cloud_encode_sensor_data(data, &output);
+	err = cloud_encode_data(data, &output);
 
 	struct cloud_msg msg = {
 		.buf = output.buf,
@@ -621,6 +625,7 @@ void cloud_event_handler(const struct cloud_backend *const backend,
 		break;
 	case CLOUD_EVT_DATA_RECEIVED:
 		printk("CLOUD_EVT_DATA_RECEIVED\n");
+		cloud_decode_command(evt->data.msg.payload);
 		break;
 	default:
 		printk("**** Unknown cloud event type ****\n");
@@ -854,7 +859,7 @@ static void env_sensor_init(void)
 
 static void button_sensor_init(void)
 {
-	button_cloud_data.type = CLOUD_SENSOR_BUTTON;
+	button_cloud_data.type = CLOUD_CHANNEL_BUTTON;
 	button_cloud_data.tag = 0x1;
 }
 
@@ -869,10 +874,10 @@ static void modem_data_init(void)
 		return;
 	}
 
-	signal_strength_cloud_data.type = CLOUD_LTE_LINK_RSRP;
+	signal_strength_cloud_data.type = CLOUD_CHANNEL_LTE_LINK_RSRP;
 	signal_strength_cloud_data.tag = 0x1;
 
-	device_cloud_data.type = CLOUD_DEVICE_INFO;
+	device_cloud_data.type = CLOUD_CHANNEL_DEVICE_INFO;
 	device_cloud_data.tag = 0x1;
 
 	k_work_submit(&device_status_work);
@@ -894,12 +899,12 @@ static void sensors_init(void)
 		button_sensor_init();
 	}
 
-	gps_cloud_data.type = CLOUD_SENSOR_GPS;
+	gps_cloud_data.type = CLOUD_CHANNEL_GPS;
 	gps_cloud_data.tag = 0x1;
 	gps_cloud_data.data.buf = nmea_data.str;
 	gps_cloud_data.data.len = nmea_data.len;
 
-	flip_cloud_data.type = CLOUD_SENSOR_FLIP;
+	flip_cloud_data.type = CLOUD_CHANNEL_FLIP;
 
 	/* Send sensor data after initialization, as it may be a long time until
 	 * next time if the application is in power optimized mode.
@@ -946,6 +951,12 @@ void main(void)
 	if (ret) {
 		printk("Cloud backend could not be initialized, error: %d\n",
 			ret);
+		cloud_error_handler(ret);
+	}
+
+	ret = cloud_decode_init(cloud_cmd_handler);
+	if (ret) {
+		printk("Cloud command decoder could not be initialized, error: %d\n", ret);
 		cloud_error_handler(ret);
 	}
 
