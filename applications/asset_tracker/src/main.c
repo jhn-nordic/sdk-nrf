@@ -137,11 +137,6 @@ static struct cloud_channel_data flip_cloud_data;
 static struct cloud_channel_data gps_cloud_data;
 static struct cloud_channel_data button_cloud_data;
 
-/* Sensor data */
-static struct gps_data nmea_data;
-static struct cloud_sensor_data flip_cloud_data;
-static struct cloud_sensor_data gps_cloud_data;
-static struct cloud_sensor_data button_cloud_data;
 #if CONFIG_MODEM_INFO
 static struct cloud_channel_data signal_strength_cloud_data;
 static struct cloud_channel_data device_cloud_data;
@@ -471,7 +466,7 @@ static void env_data_send(void)
 		if(cloud_encode_env_sensors_data(&env_data, &msg) == 0)
 		{
 			err = cloud_send(cloud_backend, &msg);
-			k_free(msg.payload);
+			k_free(msg.buf);
 			if (err) {
 				goto error;
 			}
@@ -482,7 +477,7 @@ static void env_data_send(void)
 		if(cloud_encode_env_sensors_data(&env_data, &msg) == 0)
 		{
 			err = cloud_send(cloud_backend, &msg);
-			k_free(msg.payload);
+			k_free(msg.buf);
 			if (err) {
 				goto error;
 			}
@@ -493,7 +488,7 @@ static void env_data_send(void)
 		if(cloud_encode_env_sensors_data(&env_data, &msg) == 0)
 		{
 			err = cloud_send(cloud_backend, &msg);
-			k_free(msg.payload);
+			k_free(msg.buf);
 			if (err) {
 				goto error;
 			}
@@ -600,7 +595,7 @@ void cloud_event_handler(const struct cloud_backend *const backend,
 		break;
 	case CLOUD_EVT_DATA_RECEIVED:
 		printk("CLOUD_EVT_DATA_RECEIVED\n");
-		cloud_decode_command(evt->data.msg.payload);
+		cloud_decode_command(evt->data.msg.buf);
 		break;
 	default:
 		printk("**** Unknown cloud event type ****\n");

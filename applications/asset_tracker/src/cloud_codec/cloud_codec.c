@@ -268,7 +268,7 @@ int cloud_encode_data(const struct cloud_channel_data *channel,
 
 	buffer = cJSON_PrintUnformatted(root_obj);
 	cJSON_Delete(root_obj);
-	output->payload = buffer;
+	output->buf = buffer;
 	output->len = strlen(buffer);
 
 	return 0;
@@ -382,19 +382,19 @@ int cloud_encode_env_sensors_data(const env_sensor_data_t *sensor_data,
 
 	char buf[6];
 	u8_t len;
-	struct cloud_sensor_data cloud_sensor;
+	struct cloud_channel_data cloud_channel;
 
 	switch(sensor_data->type) {
 		case ENV_SENSOR_TEMPERATURE:
-			cloud_sensor.type = CLOUD_SENSOR_TEMP;
+			cloud_channel.type = CLOUD_CHANNEL_TEMP;
 			break;
 		
 		case ENV_SENSOR_HUMIDITY:
-			cloud_sensor.type = CLOUD_SENSOR_HUMID;
+			cloud_channel.type = CLOUD_CHANNEL_HUMID;
 			break;
 
 		case ENV_SENSOR_AIR_PRESSURE:
-			cloud_sensor.type = CLOUD_SENSOR_AIR_PRESS;
+			cloud_channel.type = CLOUD_CHANNEL_AIR_PRESS;
 			break;
 		
 		default:
@@ -403,8 +403,8 @@ int cloud_encode_env_sensors_data(const env_sensor_data_t *sensor_data,
 
 	len = snprintf(buf, sizeof(buf), "%.1f",
 		sensor_data->value);
-	cloud_sensor.data.buf = buf;
-	cloud_sensor.data.len = len;
+	cloud_channel.data.buf = buf;
+	cloud_channel.data.len = len;
 
-	return cloud_encode_data(&cloud_sensor, output);
+	return cloud_encode_data(&cloud_channel, output);
 }

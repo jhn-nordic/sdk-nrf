@@ -257,7 +257,7 @@ static void event_handler(const struct nrf_cloud_evt *evt)
 	case NRF_CLOUD_EVT_RX_DATA:
 		LOG_DBG("NRF_CLOUD_EVT_RX_DATA");
 		cloud_evt.type = CLOUD_EVT_DATA_RECEIVED;
-		cloud_evt.data.msg.payload = evt->param.data.ptr;
+		cloud_evt.data.msg.buf = evt->param.data.ptr;
 		cloud_evt.data.msg.len = evt->param.data.len;
 		cloud_notify_event(nrf_cloud_backend, &cloud_evt,
 				   backend_config->user_data);
