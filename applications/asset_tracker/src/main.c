@@ -24,7 +24,7 @@
 
 #include <cloud_codec.h>
 
-
+#include "env_sensor_api.h"
 #include "orientation_detector.h"
 
 /* Interval in milliseconds between each time status LEDs are updated. */
@@ -116,13 +116,6 @@ static enum {
 #endif
 } display_state;
 
-struct env_sensor {
-	enum cloud_channel type;
-	enum sensor_channel channel;
-	u8_t *dev_name;
-	struct device *dev;
-};
-
 struct rsrp_data {
 	u16_t value;
 	u16_t offset;
@@ -138,37 +131,17 @@ static struct rsrp_data rsrp = {
 
 static struct cloud_backend *cloud_backend;
 
-static struct env_sensor temp_sensor = {
-	.type = CLOUD_CHANNEL_TEMP,
-	.channel = SENSOR_CHAN_AMBIENT_TEMP,
-	.dev_name = CONFIG_TEMP_DEV_NAME
-};
-
-static struct env_sensor humid_sensor = {
-	.type = CLOUD_CHANNEL_HUMID,
-	.channel = SENSOR_CHAN_HUMIDITY,
-	.dev_name = CONFIG_TEMP_DEV_NAME
-};
-
-static struct env_sensor pressure_sensor = {
-	.type = CLOUD_CHANNEL_AIR_PRESS,
-	.channel = SENSOR_CHAN_PRESS,
-	.dev_name = CONFIG_TEMP_DEV_NAME
-};
-
-/* Array containg environment sensors available on the board. */
-static struct env_sensor *env_sensors[] = {
-	&temp_sensor,
-	&humid_sensor,
-	&pressure_sensor
-};
-
 /* Sensor data */
 static struct gps_data nmea_data;
 static struct cloud_channel_data flip_cloud_data;
 static struct cloud_channel_data gps_cloud_data;
 static struct cloud_channel_data button_cloud_data;
-static struct cloud_channel_data env_cloud_data[ARRAY_SIZE(env_sensors)];
+
+/* Sensor data */
+static struct gps_data nmea_data;
+static struct cloud_sensor_data flip_cloud_data;
+static struct cloud_sensor_data gps_cloud_data;
+static struct cloud_sensor_data button_cloud_data;
 #if CONFIG_MODEM_INFO
 static struct cloud_channel_data signal_strength_cloud_data;
 static struct cloud_channel_data device_cloud_data;
@@ -484,45 +457,52 @@ static void device_status_send(struct k_work *work)
 /**@brief Get environment data from sensors and send to cloud. */
 static void env_data_send(void)
 {
-	int num_sensors = ARRAY_SIZE(env_sensors);
-	struct sensor_value data[num_sensors];
-	char buf[6];
 	int err;
-	u8_t len;
+	env_sensor_data_t env_data;
+	struct cloud_msg msg = {
+		.qos = CLOUD_QOS_AT_MOST_ONCE
+	};
 
 	if (!atomic_get(&send_data_enable)) {
 		return;
 	}
 
-	for (int i = 0; i < num_sensors; i++) {
-		err = sensor_sample_fetch_chan(env_sensors[i]->dev,
-			env_sensors[i]->channel);
-		if (err) {
-			printk("Failed to fetch data from %s, error: %d\n",
-				env_sensors[i]->dev_name, err);
-			return;
+	if(env_sensors_get_temperature(&env_data, NULL) == 0) {
+		if(cloud_encode_env_sensors_data(&env_data, &msg) == 0)
+		{
+			err = cloud_send(cloud_backend, &msg);
+			k_free(msg.payload);
+			if (err) {
+				goto error;
+			}
 		}
-
-		err = sensor_channel_get(env_sensors[i]->dev,
-			env_sensors[i]->channel, &data[i]);
-		if (err) {
-			printk("Failed to fetch data from %s, error: %d\n",
-				env_sensors[i]->dev_name, err);
-			return;
-		}
-
-		len = snprintf(buf, sizeof(buf), "%.1f",
-			sensor_value_to_double(&data[i]));
-		env_cloud_data[i].data.buf = buf;
-		env_cloud_data[i].data.len = len;
-		env_cloud_data[i].tag += 1;
-
-		if (env_cloud_data[i].tag == 0) {
-			env_cloud_data[i].tag = 0x1;
-		}
-
-		sensor_data_send(&env_cloud_data[i]);
 	}
+
+	if(env_sensors_get_humidity(&env_data, NULL) == 0) {
+		if(cloud_encode_env_sensors_data(&env_data, &msg) == 0)
+		{
+			err = cloud_send(cloud_backend, &msg);
+			k_free(msg.payload);
+			if (err) {
+				goto error;
+			}
+		}
+	}
+
+	if(env_sensors_get_pressure(&env_data, NULL) == 0) {
+		if(cloud_encode_env_sensors_data(&env_data, &msg) == 0)
+		{
+			err = cloud_send(cloud_backend, &msg);
+			k_free(msg.payload);
+			if (err) {
+				goto error;
+			}
+		}
+	}
+	return;
+error:
+	printk("sensor_data_send failed: %d\n", err);
+	cloud_error_handler(err);
 }
 
 /**@brief Update LEDs state. */
@@ -563,24 +543,19 @@ static void leds_update(struct k_work *work)
 static void sensor_data_send(struct cloud_channel_data *data)
 {
 	int err = 0;
-	struct cloud_data output;
-
+	struct cloud_msg msg = {
+			.qos = CLOUD_QOS_AT_MOST_ONCE,
+			.endpoint.type = CLOUD_EP_TOPIC_MSG
+		};
 	if (!atomic_get(&send_data_enable)) {
 		return;
 	}
 
-	err = cloud_encode_data(data, &output);
-
-	struct cloud_msg msg = {
-		.buf = output.buf,
-		.len = output.len,
-		.qos = CLOUD_QOS_AT_MOST_ONCE,
-		.endpoint.type = CLOUD_EP_TOPIC_MSG
-	};
+	err = cloud_encode_data(data, &msg);
 
 	err = cloud_send(cloud_backend, &msg);
 
-	k_free(output.buf);
+	k_free(msg.buf);
 
 	if (err) {
 		printk("sensor_data_send failed: %d\n", err);
@@ -608,7 +583,7 @@ void cloud_event_handler(const struct cloud_backend *const backend,
 	switch (evt->type) {
 	case CLOUD_EVT_CONNECTED:
 		printk("CLOUD_EVT_CONNECTED\n");
-		display_state = LEDS_CONNECTED;
+		//display_state = LEDS_CONNECTED;
 		break;
 	case CLOUD_EVT_READY:
 		printk("CLOUD_EVT_READY\n");
@@ -843,19 +818,7 @@ static void flip_detection_init(void)
 	}
 }
 
-/**@brief Initialize environment sensors. */
-static void env_sensor_init(void)
-{
-	for (int i = 0; i < ARRAY_SIZE(env_sensors); i++) {
-		env_sensors[i]->dev =
-			device_get_binding(env_sensors[i]->dev_name);
-		__ASSERT(env_sensors[i]->dev, "Could not get device %s\n",
-			env_sensors[i]->dev_name);
 
-		env_cloud_data[i].type = env_sensors[i]->type;
-		env_cloud_data[i].tag = 0x1;
-	}
-}
 
 static void button_sensor_init(void)
 {
@@ -891,7 +854,10 @@ static void sensors_init(void)
 {
 	gps_init();
 	flip_detection_init();
-	env_sensor_init();
+	env_sensors_init();
+	env_sensors_start_polling();
+
+	
 #if CONFIG_MODEM_INFO
 	modem_data_init();
 #endif /* CONFIG_MODEM_INFO */
@@ -910,7 +876,6 @@ static void sensors_init(void)
 	 * next time if the application is in power optimized mode.
 	 */
 	k_work_submit(&send_gps_data_work);
-	env_data_send();
 }
 
 /**@brief Initializes buttons and LEDs, using the DK buttons and LEDs
