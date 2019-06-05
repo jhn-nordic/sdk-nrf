@@ -13,6 +13,10 @@
 #ifndef CLOUD_CODEC_H__
 #define CLOUD_CODEC_H__
 
+#include <nrf_cloud.h>
+#include <net/cloud.h>
+#include "env_sensor_api.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -105,11 +109,14 @@ struct cloud_command {
 typedef void (*cloud_cmd_cb_t)(struct cloud_command *cmd);
 
 int cloud_encode_data(const struct cloud_channel_data *channel,
-			struct cloud_data *output);
+			struct cloud_msg *output);
 
 int cloud_decode_command(char *input);
 
 int cloud_decode_init(cloud_cmd_cb_t cb);
+
+int cloud_encode_env_sensors_data(const env_sensor_data_t *sensor_data,
+				  struct cloud_msg *output);
 
 #ifdef __cplusplus
 }
