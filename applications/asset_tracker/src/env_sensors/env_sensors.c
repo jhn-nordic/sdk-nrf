@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sensor.h>
+#include <spinlock.h>
 #include "env_sensor_api.h"
 
 struct env_sensor {
@@ -15,6 +16,7 @@ struct env_sensor {
 	enum sensor_channel channel;
 	u8_t *dev_name;
 	struct device *dev;
+	struct k_spinlock lock;
 };
 
 static struct env_sensor temp_sensor = {
@@ -80,7 +82,9 @@ static void env_sensors_poll_fn(struct k_work *work)
 			printk("Failed to fetch data from %s, error: %d\n",
 				env_sensors[i]->dev_name, err);
 		}
+		k_spinlock_key_t key = k_spin_lock(&(env_sensors[i]->lock));
 		env_sensors[i]->sensor.value=sensor_value_to_double(&data[i]);
+		k_spin_unlock(&(env_sensors[i]->lock), key);
 	}
 	
 	 k_delayed_work_submit(&env_sensors_poller, K_SECONDS(10));
@@ -111,7 +115,9 @@ int env_sensors_get_temperature(env_sensor_data_t *sensor_data, u64_t *sensor_id
 	if(sensor_data == NULL) {
 		return -1;
 	}
+	k_spinlock_key_t key = k_spin_lock(&temp_sensor.lock);
 	memcpy(sensor_data, &(temp_sensor.sensor),sizeof(temp_sensor.sensor));
+	k_spin_unlock(&temp_sensor.lock, key);
 	return 0;
 }
 
@@ -120,7 +126,9 @@ int env_sensors_get_humidity(env_sensor_data_t *sensor_data, u64_t *sensor_id)
 	if(sensor_data == NULL) {
 		return -1;
 	}
+	k_spinlock_key_t key = k_spin_lock(&humid_sensor.lock);
 	memcpy(sensor_data, &(humid_sensor.sensor),sizeof(humid_sensor.sensor));
+	k_spin_unlock(&humid_sensor.lock, key);
 	return 0;
 }
 
@@ -129,7 +137,9 @@ int env_sensors_get_pressure(env_sensor_data_t *sensor_data, u64_t *sensor_id)
 	if(sensor_data == NULL) {
 		return -1;
 	}
+	k_spinlock_key_t key = k_spin_lock(&pressure_sensor.lock);
 	memcpy(sensor_data, &(pressure_sensor.sensor),sizeof(pressure_sensor.sensor));
+	k_spin_unlock(&pressure_sensor.lock, key);
 	return 0;	
 }
 
