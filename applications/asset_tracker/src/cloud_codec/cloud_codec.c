@@ -423,6 +423,10 @@ int cloud_encode_env_sensors_data(const env_sensor_data_t *sensor_data,
 		case ENV_SENSOR_AIR_PRESSURE:
 			cloud_sensor.type = CLOUD_CHANNEL_AIR_PRESS;
 			break;
+			
+		case ENV_SENSOR_AIR_QUALITY:
+			cloud_sensor.type = CLOUD_CHANNEL_AIR_QUAL;
+			break;
 		
 		default:
 			return -1;
@@ -432,6 +436,6 @@ int cloud_encode_env_sensors_data(const env_sensor_data_t *sensor_data,
 		sensor_data->value);
 	cloud_sensor.data.buf = buf;
 	cloud_sensor.data.len = len;
-	
+
 	return cloud_encode_data(&cloud_sensor, output);
 }
