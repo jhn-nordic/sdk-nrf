@@ -33,4 +33,22 @@ add_subdirectory(src/gps_controller)
 add_subdirectory(src/battery_monitor)
 
 include_directories(src/env_sensors)
-target_sources(app PRIVATE src/env_sensors/env_sensors.c)
+
+#target_sources(app PRIVATE src/env_sensors/env_sensors.c)
+
+target_sources(app PRIVATE src/env_sensors//bsec.c)
+
+set (bsec_dir ${CMAKE_CURRENT_SOURCE_DIR}/src/env_sensors/BSEC_1.4.7.3_Generic_Release)
+include_directories(${bsec_dir}/API)
+target_sources(app PRIVATE ${bsec_dir}/examples/bsec_integration.c)
+include_directories(${bsec_dir}/examples)
+target_sources(app PRIVATE ${bsec_dir}/API/bme680.c)
+
+set(BSEC_LIB_DIR ${bsec_dir}/algo/bin/Normal_version/gcc/Cortex_M4F)
+set(BSEC_INCLUDE_DIR ${bsec_dir}/algo/bin/Normal_version/gcc/Cortex_M4F)
+add_library(bsec_lib STATIC IMPORTED GLOBAL)
+add_dependencies(bsec_lib math_lib bsec_target)
+set_target_properties(bsec_lib PROPERTIES IMPORTED_LOCATION "${BSEC_LIB_DIR}/libalgobsec.a")
+set_target_properties(bsec_lib PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${BSEC_INCLUDE_DIR})
+target_link_libraries(bsec_lib INTERFACE -L${LIBC_LIBRARY_DIR})
+target_link_libraries(app PUBLIC bsec_lib)
