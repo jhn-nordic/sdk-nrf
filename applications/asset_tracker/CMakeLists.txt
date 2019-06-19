@@ -28,3 +28,6 @@ zephyr_library_include_directories(
 add_subdirectory(src/orientation_detector)
 add_subdirectory(src/ui)
 add_subdirectory(src/cloud_codec)
+
+include_directories(src/env_sensors)
+target_sources(app PRIVATE src/env_sensors/env_sensors.c)
