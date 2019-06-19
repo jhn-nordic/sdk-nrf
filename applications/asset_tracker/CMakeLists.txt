@@ -31,3 +31,6 @@ add_subdirectory(src/ui)
 add_subdirectory(src/cloud_codec)
 add_subdirectory(src/gps_controller)
 add_subdirectory(src/battery_monitor)
+
+include_directories(src/env_sensors)
+target_sources(app PRIVATE src/env_sensors/env_sensors.c)
