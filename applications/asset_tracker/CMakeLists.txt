@@ -22,6 +22,7 @@ zephyr_library_include_directories(
   src/orientation_detector
   src/ui
   src/cloud_codec
+  src/battery_monitor
   )
 
 # Application sources
@@ -29,3 +30,4 @@ add_subdirectory(src/orientation_detector)
 add_subdirectory(src/ui)
 add_subdirectory(src/cloud_codec)
 add_subdirectory(src/gps_controller)
+add_subdirectory(src/battery_monitor)
