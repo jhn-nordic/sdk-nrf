@@ -447,6 +447,17 @@ static void env_data_send(void)
 			}
 		}
 	}
+
+	if(env_sensors_get_air_quality(&env_data, NULL) == 0) {
+		if(cloud_encode_env_sensors_data(&env_data, &msg) == 0)
+		{
+			err = cloud_send(cloud_backend, &msg);
+			k_free(msg.buf);
+			if (err) {
+				goto error;
+			}
+		}
+	}
 	return;
 error:
 	printk("sensor_data_send failed: %d\n", err);
@@ -747,7 +758,7 @@ static void sensors_init(void)
 	env_sensors_init();
 	env_sensors_start_polling();
 
-	
+
 #if CONFIG_MODEM_INFO
 	modem_data_init();
 #endif /* CONFIG_MODEM_INFO */
