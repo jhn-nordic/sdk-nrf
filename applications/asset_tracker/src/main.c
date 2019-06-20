@@ -152,10 +152,9 @@ void error_handler(enum error_type err_type, int err_code)
 		/* Turn off and shutdown modem */
 		int err = lte_lc_power_off();
 		if (err) {
-			printk("Could not shut down the LTE link, error: %d\n",
-			       err);
+			printk("lte_lc_power_off failed: %d\n", err);
 		}
-#endif /* CONFIG_LTE_LINK_CONTROL */
+#endif
 #if defined(CONFIG_BSD_LIBRARY)
 		bsdlib_shutdown();
 #endif
@@ -275,6 +274,8 @@ static void send_flip_data_work_fn(struct k_work *work)
 /**@brief Callback for GPS trigger events */
 static void gps_trigger_handler(struct device *dev, struct gps_trigger *trigger)
 {
+	static u32_t fix_count;
+
 	ARG_UNUSED(trigger);
 
 	if (ui_button_is_active(UI_SWITCH_2)
@@ -282,7 +283,11 @@ static void gps_trigger_handler(struct device *dev, struct gps_trigger *trigger)
 		return;
 	}
 
-	gps_control_on_trigger();
+	if (++fix_count < CONFIG_GPS_CONTROL_FIX_COUNT) {
+		return;
+	}
+
+	fix_count = 0;
 
 	gps_sample_fetch(dev);
 	gps_channel_get(dev, GPS_CHAN_NMEA, &gps_data);
@@ -295,6 +300,7 @@ static void gps_trigger_handler(struct device *dev, struct gps_trigger *trigger)
 		gps_cloud_data.tag = 0x1;
 	}
 
+	gps_control_stop(K_NO_WAIT);
 	k_work_submit(&send_gps_data_work);
 }
 
@@ -595,7 +601,7 @@ static void sensor_data_send(struct cloud_channel_data *data)
 		msg.endpoint.type = CLOUD_EP_TOPIC_STATE;
 	}
 
-	if (!atomic_get(&send_data_enable)) {
+	if (!atomic_get(&send_data_enable) || gps_control_is_active()) {
 		return;
 	}
 
@@ -826,24 +832,18 @@ static void pairing_button_register(struct ui_evt *evt)
 	}
 }
 
-static void accelerometer_calibrate(struct k_work *work)
+static void long_press_handler(struct k_work *work)
 {
-	int err;
-	enum ui_led_pattern temp_led_state = ui_led_get_pattern();
-
-	printk("Starting accelerometer calibration...\n");
-
-	ui_led_set_pattern(UI_ACCEL_CALIBRATING);
-
-	err = orientation_detector_calibrate();
-	if (err) {
-		printk("Accelerometer calibration failed: %d\n",
-			err);
+	if (gps_control_is_enabled()) {
+		ui_led_set_pattern(UI_CLOUD_CONNECTED);
+		printk("Stopping GPS\n");
+		gps_control_disable();
 	} else {
-		printk("Accelerometer calibration done.\n");
+		ui_led_set_color(100, 0, 100, K_SECONDS(1), K_SECONDS(3));
+		printk("Starting GPS\n");
+		gps_control_enable();
+		gps_control_start(K_SECONDS(1));
 	}
-
-	ui_led_set_pattern(temp_led_state);
 }
 
 /**@brief Initializes and submits delayed work. */
@@ -855,7 +855,7 @@ static void work_init(void)
 	k_work_init(&send_flip_data_work, send_flip_data_work_fn);
 	k_delayed_work_init(&send_env_data_work, send_env_data_work_fn);
 	k_delayed_work_init(&flip_poll_work, flip_send);
-	k_delayed_work_init(&long_press_button_work, accelerometer_calibrate);
+	k_delayed_work_init(&long_press_button_work, long_press_handler);
 	k_delayed_work_init(&cloud_reboot_work, cloud_reboot_handler);
 #if CONFIG_BATTERY_MONITOR
 	k_delayed_work_init(&battery_monitor_work, battery_monitor_check);
@@ -884,7 +884,10 @@ static void modem_configure(void)
 		ui_led_set_pattern(UI_LTE_CONNECTING);
 
 		err = lte_lc_init_and_connect();
-		__ASSERT(err == 0, "LTE link could not be established.");
+		if(err) {
+			printk("LTE link could not be established.\n");
+			error_handler(ERROR_LTE_LC, err);
+		}
 
 		printk("Connected to LTE network\n");
 		ui_led_set_pattern(UI_LTE_CONNECTED);
@@ -1003,7 +1006,7 @@ static void sensors_init(void)
 		button_sensor_init();
 	}
 
-	// gps_control_init(gps_trigger_handler);
+	gps_control_init(gps_trigger_handler);
 
 	flip_cloud_data.type = CLOUD_CHANNEL_FLIP;
 
@@ -1030,6 +1033,16 @@ static void ui_evt_handler(struct ui_evt evt)
 	   && atomic_get(&send_data_enable)) {
 		flip_send(NULL);
 	}
+
+	if (IS_ENABLED(CONFIG_GPS_CONTROL_ON_LONG_PRESS) &&
+	   (evt.button == UI_BUTTON_1)) {
+		if (evt.type == UI_EVT_BUTTON_ACTIVE) {
+			k_delayed_work_submit(&long_press_button_work,
+			K_SECONDS(5));
+		} else {
+			k_delayed_work_cancel(&long_press_button_work);
+		}
+	    }
 
 #if defined(CONFIG_LTE_LINK_CONTROL)
 	if ((evt.button == UI_SWITCH_2) &&
@@ -1133,7 +1146,7 @@ connect:
 				goto connect;
 			}
 			error_handler(ERROR_CLOUD, -EIO);
-			return;
+			break;
 		}
 
 		if ((fds[0].revents & POLLERR) == POLLERR) {
@@ -1142,4 +1155,7 @@ connect:
 			return;
 		}
 	}
+
+	cloud_disconnect(cloud_backend);
+	goto connect;
 }
