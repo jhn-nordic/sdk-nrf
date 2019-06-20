@@ -33,6 +33,8 @@ manifest:
       url-base: https://github.com/ThrowTheSwitch
     - name: armmbed
       url-base: https://github.com/ARMmbed
+    - name: jtguggedal
+      url-base: https://github.com/jtguggedal
 
   # The list of external projects for the nRF Connect SDK.
   #
@@ -51,7 +53,8 @@ manifest:
       remote: zephyrproject
     - name: fw-nrfconnect-mcuboot
       path: mcuboot
-      revision: 8b0e50cd5898e66e8bf92b5378c5b29fb0838471
+      revision: c84a81a91f40633b02c86bceaffa4e61382225ab
+      remote: jtguggedal
     - name: fw-nrfconnect-mcumgr
       revision: c8f675a5fa7f62106b9d913844bd5ed6e16ae69e
       path: modules/lib/mcumgr
