@@ -22,7 +22,9 @@
 #include <net/socket.h>
 #include <nrf_cloud.h>
 
-#include "cloud_codec.h"
+#include <cloud_codec.h>
+
+#include "env_sensor_api.h"
 #include "orientation_detector.h"
 #include "ui.h"
 #include "gps_controller.h"
@@ -71,13 +73,6 @@ defined(CONFIG_NRF_CLOUD_PROVISION_CERTIFICATES)
 #define CLOUD_LED_OFF_STR "{\"led\":\"off\"}"
 #define CLOUD_LED_MSK UI_LED_1
 
-struct env_sensor {
-	enum cloud_channel type;
-	enum sensor_channel channel;
-	u8_t *dev_name;
-	struct device *dev;
-};
-
 struct rsrp_data {
 	u16_t value;
 	u16_t offset;
@@ -93,31 +88,6 @@ static struct rsrp_data rsrp = {
 
 static struct cloud_backend *cloud_backend;
 
-static struct env_sensor temp_sensor = {
-	.type = CLOUD_CHANNEL_TEMP,
-	.channel = SENSOR_CHAN_AMBIENT_TEMP,
-	.dev_name = CONFIG_TEMP_DEV_NAME
-};
-
-static struct env_sensor humid_sensor = {
-	.type = CLOUD_CHANNEL_HUMID,
-	.channel = SENSOR_CHAN_HUMIDITY,
-	.dev_name = CONFIG_TEMP_DEV_NAME
-};
-
-static struct env_sensor pressure_sensor = {
-	.type = CLOUD_CHANNEL_AIR_PRESS,
-	.channel = SENSOR_CHAN_PRESS,
-	.dev_name = CONFIG_TEMP_DEV_NAME
-};
-
-/* Array containg environment sensors available on the board. */
-static struct env_sensor *env_sensors[] = {
-	&temp_sensor,
-	&humid_sensor,
-	&pressure_sensor
-};
-
  /* Variables to keep track of nRF cloud user association. */
 static u8_t ua_pattern[6];
 static int buttons_to_capture;
@@ -131,7 +101,7 @@ static struct gps_data gps_data;
 static struct cloud_channel_data flip_cloud_data;
 static struct cloud_channel_data gps_cloud_data;
 static struct cloud_channel_data button_cloud_data;
-static struct cloud_channel_data env_cloud_data[ARRAY_SIZE(env_sensors)];
+
 #if CONFIG_MODEM_INFO
 static struct modem_param_info modem_param;
 static struct cloud_channel_data signal_strength_cloud_data;
@@ -549,81 +519,96 @@ static void device_status_send(struct k_work *work)
 /**@brief Get environment data from sensors and send to cloud. */
 static void env_data_send(void)
 {
-	int num_sensors = ARRAY_SIZE(env_sensors);
-	struct sensor_value data[num_sensors];
-	char buf[6];
 	int err;
-	u8_t len;
+	env_sensor_data_t env_data;
+	struct cloud_msg msg = {
+		.qos = CLOUD_QOS_AT_MOST_ONCE,
+		.endpoint.type = CLOUD_EP_TOPIC_MSG
+	};
 
 	if (!atomic_get(&send_data_enable)) {
 		return;
 	}
 
-	for (int i = 0; i < num_sensors; i++) {
-		err = sensor_sample_fetch_chan(env_sensors[i]->dev,
-			env_sensors[i]->channel);
-		if (err) {
-			printk("Failed to fetch data from %s, error: %d\n",
-				env_sensors[i]->dev_name, err);
-			return;
+	if(env_sensors_get_temperature(&env_data, NULL) == 0) {
+		if(cloud_encode_env_sensors_data(&env_data, &msg) == 0)
+		{
+			err = cloud_send(cloud_backend, &msg);
+			cloud_release_data(&msg);
+			if (err) {
+				goto error;
+			}
 		}
-
-		err = sensor_channel_get(env_sensors[i]->dev,
-			env_sensors[i]->channel, &data[i]);
-		if (err) {
-			printk("Failed to fetch data from %s, error: %d\n",
-				env_sensors[i]->dev_name, err);
-			return;
-		}
-
-		len = snprintf(buf, sizeof(buf), "%.1f",
-			sensor_value_to_double(&data[i]));
-		env_cloud_data[i].data.buf = buf;
-		env_cloud_data[i].data.len = len;
-		env_cloud_data[i].tag += 1;
-
-		if (env_cloud_data[i].tag == 0) {
-			env_cloud_data[i].tag = 0x1;
-		}
-
-		sensor_data_send(&env_cloud_data[i]);
 	}
+
+	if(env_sensors_get_humidity(&env_data, NULL) == 0) {
+		if(cloud_encode_env_sensors_data(&env_data, &msg) == 0)
+		{
+			err = cloud_send(cloud_backend, &msg);
+			cloud_release_data(&msg);
+			if (err) {
+				goto error;
+			}
+		}
+	}
+
+	if(env_sensors_get_pressure(&env_data, NULL) == 0) {
+		if(cloud_encode_env_sensors_data(&env_data, &msg) == 0)
+		{
+			err = cloud_send(cloud_backend, &msg);
+			cloud_release_data(&msg);
+			if (err) {
+				goto error;
+			}
+		}
+	}
+
+	if(env_sensors_get_air_quality(&env_data, NULL) == 0) {
+		if(cloud_encode_env_sensors_data(&env_data, &msg) == 0)
+		{
+			err = cloud_send(cloud_backend, &msg);
+			k_free(msg.buf);
+			if (err) {
+				goto error;
+			}
+		}
+	}
+	return;
+error:
+	printk("sensor_data_send failed: %d\n", err);
+	cloud_error_handler(err);
 }
 
 /**@brief Send sensor data to nRF Cloud. **/
 static void sensor_data_send(struct cloud_channel_data *data)
 {
 	int err = 0;
-	struct cloud_data output;
+	struct cloud_msg msg = {
+			.qos = CLOUD_QOS_AT_MOST_ONCE,
+			.endpoint.type = CLOUD_EP_TOPIC_MSG
+		};
+
+	if (data->type == CLOUD_CHANNEL_DEVICE_INFO) {
+		msg.endpoint.type = CLOUD_EP_TOPIC_STATE;
+	}
 
 	if (!atomic_get(&send_data_enable)) {
 		return;
 	}
 
 	if (data->type != CLOUD_CHANNEL_DEVICE_INFO) {
-		err = cloud_encode_data(data, &output);
+		err = cloud_encode_data(data, &msg);
 	} else {
-		err = cloud_encode_digital_twin_data(data, &output);
+		err = cloud_encode_digital_twin_data(data, &msg);
 	}
 
 	if (err) {
 		printk("Unable to encode cloud data: %d\n", err);
 	}
 
-	struct cloud_msg msg = {
-		.buf = output.buf,
-		.len = output.len,
-		.qos = CLOUD_QOS_AT_MOST_ONCE,
-		.endpoint.type = CLOUD_EP_TOPIC_MSG
-	};
-
-	if (data->type == CLOUD_CHANNEL_DEVICE_INFO) {
-		msg.endpoint.type = CLOUD_EP_TOPIC_STATE;
-	}
-
 	err = cloud_send(cloud_backend, &msg);
 
-	cloud_release_data(&output);
+	cloud_release_data(&msg);
 
 	if (err) {
 		printk("sensor_data_send failed: %d\n", err);
@@ -962,19 +947,7 @@ static void flip_detection_init(void)
 	}
 }
 
-/**@brief Initialize environment sensors. */
-static void env_sensor_init(void)
-{
-	for (int i = 0; i < ARRAY_SIZE(env_sensors); i++) {
-		env_sensors[i]->dev =
-			device_get_binding(env_sensors[i]->dev_name);
-		__ASSERT(env_sensors[i]->dev, "Could not get device %s\n",
-			env_sensors[i]->dev_name);
 
-		env_cloud_data[i].type = env_sensors[i]->type;
-		env_cloud_data[i].tag = 0x1;
-	}
-}
 
 static void button_sensor_init(void)
 {
@@ -1012,7 +985,9 @@ static void sensors_init(void)
 {
 	accelerometer_init();
 	flip_detection_init();
-	env_sensor_init();
+	env_sensors_init();
+	env_sensors_start_polling();
+
 #if CONFIG_MODEM_INFO
 	modem_data_init();
 #endif /* CONFIG_MODEM_INFO */
