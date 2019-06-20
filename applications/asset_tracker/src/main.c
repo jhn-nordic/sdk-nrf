@@ -5,6 +5,7 @@
  */
 
 #include <zephyr.h>
+#include <kernel_structs.h>
 #include <stdio.h>
 #include <string.h>
 #include <gps.h>
@@ -25,13 +26,21 @@
 #include "orientation_detector.h"
 #include "ui.h"
 #include "gps_controller.h"
+#include "battery_monitor.h"
 
 #define CALIBRATION_PRESS_DURATION 	K_SECONDS(5)
+#define CLOUD_CONNACK_WAIT_DURATION	K_SECONDS(CONFIG_CLOUD_WAIT_DURATION)
 
 #if defined(CONFIG_FLIP_POLL)
 #define FLIP_POLL_INTERVAL		K_MSEC(CONFIG_FLIP_POLL_INTERVAL)
 #else
 #define FLIP_POLL_INTERVAL		0
+#endif
+
+#if CONFIG_BATTERY_MONITOR
+#define BATTERY_MONITOR_INTERVAL	K_MSEC(CONFIG_BATTERY_MONITOR_INTERVAL)
+#else
+#define BATTERY_MONITOR_INTERVAL		0
 #endif
 
 #ifdef CONFIG_ACCEL_USE_SIM
@@ -141,6 +150,8 @@ static struct k_work send_button_data_work;
 static struct k_work send_flip_data_work;
 static struct k_delayed_work flip_poll_work;
 static struct k_delayed_work long_press_button_work;
+static struct k_delayed_work battery_monitor_work;
+static struct k_delayed_work cloud_reboot_work;
 #if CONFIG_MODEM_INFO
 static struct k_work device_status_work;
 static struct k_work rsrp_work;
@@ -150,7 +161,8 @@ enum error_type {
 	ERROR_CLOUD,
 	ERROR_BSD_RECOVERABLE,
 	ERROR_BSD_IRRECOVERABLE,
-	ERROR_LTE_LC
+	ERROR_LTE_LC,
+	ERROR_THREAD
 };
 
 /* Forward declaration of functions */
@@ -160,6 +172,7 @@ static void env_data_send(void);
 static void sensors_init(void);
 static void work_init(void);
 static void sensor_data_send(struct cloud_channel_data *data);
+static void device_status_send(struct k_work *work);
 
 /**@brief nRF Cloud error handler. */
 void error_handler(enum error_type err_type, int err_code)
@@ -215,6 +228,36 @@ void error_handler(enum error_type err_type, int err_code)
 		k_cpu_idle();
 	}
 #endif /* CONFIG_DEBUG */
+}
+
+void z_SysFatalErrorHandler(unsigned int reason,
+			    const NANO_ESF *pEsf)
+{
+	ARG_UNUSED(pEsf);
+
+#if !defined(CONFIG_SIMPLE_FATAL_ERROR_HANDLER)
+#if defined(CONFIG_STACK_SENTINEL)
+	if (reason == _NANO_ERR_STACK_CHK_FAIL) {
+		goto error_handler;
+	}
+#endif
+	if (reason == _NANO_ERR_KERNEL_PANIC) {
+		goto error_handler;
+	}
+
+	if (z_is_thread_essential()) {
+		printk("Fatal fault in essential thread! Spinning...\n");
+		goto error_handler;
+	}
+
+	printk("Fatal fault in thread %p! Aborting.\n", _current);
+	k_thread_abort(_current);
+
+	return;
+#endif
+
+error_handler:
+	error_handler(ERROR_THREAD, reason);
 }
 
 void cloud_error_handler(int err)
@@ -361,7 +404,63 @@ exit:
 static void cloud_cmd_handler(struct cloud_command *cmd)
 {
 	/* Command handling goes here. */
+	if (cmd->recipient == CLOUD_RCPT_MODEM_INFO) {
+#if CONFIG_MODEM_INFO
+		if (cmd->type == CLOUD_CMD_READ) {
+			device_status_send(NULL);
+		}
+#endif
+	} else if (cmd->recipient == CLOUD_RCPT_UI) {
+		if (cmd->type == CLOUD_CMD_LED_RED) {
+			ui_led_set_color(127, 0, 0,
+					 UI_LED_ON_PERIOD_NORMAL,
+					 UI_LED_OFF_PERIOD_NORMAL);
+		} else if (cmd->type == CLOUD_CMD_LED_GREEN) {
+			ui_led_set_color(0, 127, 0,
+					 UI_LED_ON_PERIOD_NORMAL,
+					 UI_LED_OFF_PERIOD_NORMAL);
+		} else if (cmd->type == CLOUD_CMD_LED_BLUE) {
+			ui_led_set_color(0, 0, 127,
+					 UI_LED_ON_PERIOD_NORMAL,
+					 UI_LED_OFF_PERIOD_NORMAL);
+		}
+	}
 }
+
+#if CONFIG_BATTERY_MONITOR
+static void battery_monitor_check(struct k_work *work)
+{
+	static u8_t bat_charge;
+	static bool bat_level_acceptable = true;
+
+	battery_monitor_read(&bat_charge);
+
+	if (bat_charge < CONFIG_BATTERY_MONITOR_THRESHOLD &&
+	    bat_level_acceptable == true) {
+		ui_led_set_color(CONFIG_BATTERY_MONITOR_RED_VALUE,
+				 0,
+				 0,
+				 UI_LED_ON_PERIOD_CRITICAL,
+				 UI_LED_OFF_PERIOD_CRITICAL);
+		bat_level_acceptable = false;
+	} else if (bat_charge >= CONFIG_BATTERY_MONITOR_THRESHOLD &&
+	   bat_level_acceptable == false) {
+		ui_led_set_color(0,
+				 CONFIG_BATTERY_MONITOR_GREEN_VALUE,
+				 0,
+				 UI_LED_ON_PERIOD_NORMAL,
+				 UI_LED_OFF_PERIOD_NORMAL);
+		bat_level_acceptable = true;
+	}
+#if CONFIG_MODEM_INFO
+	modem_param.device.bat_charge = bat_charge;
+#endif
+	if (work) {
+		k_delayed_work_submit(&battery_monitor_work,
+				      BATTERY_MONITOR_INTERVAL);
+	}
+}
+#endif
 
 #if CONFIG_MODEM_INFO
 /**@brief Callback handler for LTE RSRP data. */
@@ -509,7 +608,6 @@ static void sensor_data_send(struct cloud_channel_data *data)
 	if (err) {
 		printk("Unable to encode cloud data: %d\n", err);
 	}
-	err = cloud_encode_data(data, &output);
 
 	struct cloud_msg msg = {
 		.buf = output.buf,
@@ -532,6 +630,12 @@ static void sensor_data_send(struct cloud_channel_data *data)
 	}
 }
 
+/**@brief Reboot the device if CONNACK has not arrived. */
+static void cloud_reboot_handler(struct k_work *work)
+{
+	error_handler(ERROR_CLOUD, 0);
+}
+
 /**@brief Callback for sensor attached event from nRF Cloud. */
 void sensors_start(void)
 {
@@ -540,6 +644,11 @@ void sensors_start(void)
 
 	if (IS_ENABLED(CONFIG_FLIP_POLL)) {
 		k_delayed_work_submit(&flip_poll_work, K_NO_WAIT);
+	}
+
+	if (IS_ENABLED(CONFIG_BATTERY_MONITOR)) {
+		k_delayed_work_submit(&battery_monitor_work,
+				      BATTERY_MONITOR_INTERVAL);
 	}
 }
 
@@ -645,6 +754,7 @@ void cloud_event_handler(const struct cloud_backend *const backend,
 	switch (evt->type) {
 	case CLOUD_EVT_CONNECTED:
 		printk("CLOUD_EVT_CONNECTED\n");
+		k_delayed_work_cancel(&cloud_reboot_work);
 		ui_led_set_pattern(UI_CLOUD_CONNECTED);
 		break;
 	case CLOUD_EVT_READY:
@@ -757,6 +867,10 @@ static void work_init(void)
 	k_work_init(&send_flip_data_work, send_flip_data_work_fn);
 	k_delayed_work_init(&flip_poll_work, flip_send);
 	k_delayed_work_init(&long_press_button_work, accelerometer_calibrate);
+	k_delayed_work_init(&cloud_reboot_work, cloud_reboot_handler);
+#if CONFIG_BATTERY_MONITOR
+	k_delayed_work_init(&battery_monitor_work, battery_monitor_check);
+#endif
 #if CONFIG_MODEM_INFO
 	k_work_init(&device_status_work, device_status_send);
 	k_work_init(&rsrp_work, modem_rsrp_data_send);
@@ -901,6 +1015,11 @@ static void sensors_init(void)
 #if CONFIG_MODEM_INFO
 	modem_data_init();
 #endif /* CONFIG_MODEM_INFO */
+
+	if (IS_ENABLED(CONFIG_BATTERY_MONITOR)) {
+		battery_monitor_init();
+	}
+
 	if (IS_ENABLED(CONFIG_CLOUD_BUTTON)) {
 		button_sensor_init();
 	}
@@ -991,6 +1110,9 @@ connect:
 	if (ret) {
 		printk("cloud_connect failed: %d\n", ret);
 		cloud_error_handler(ret);
+	} else {
+		k_delayed_work_submit(&cloud_reboot_work,
+				      CLOUD_CONNACK_WAIT_DURATION);
 	}
 
 	struct pollfd fds[] = {
