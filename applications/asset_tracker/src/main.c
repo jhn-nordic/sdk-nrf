@@ -289,6 +289,8 @@ static void gps_trigger_handler(struct device *dev, struct gps_trigger *trigger)
 
 	fix_count = 0;
 
+	ui_led_set_pattern(UI_LED_GPS_FIX);
+
 	gps_sample_fetch(dev);
 	gps_channel_get(dev, GPS_CHAN_NMEA, &gps_data);
 
@@ -535,7 +537,7 @@ static void env_data_send(void)
 		.endpoint.type = CLOUD_EP_TOPIC_MSG
 	};
 
-	if (!atomic_get(&send_data_enable)) {
+	if (!atomic_get(&send_data_enable) || gps_control_is_active()) {
 		return;
 	}
 
@@ -597,12 +599,12 @@ static void sensor_data_send(struct cloud_channel_data *data)
 			.endpoint.type = CLOUD_EP_TOPIC_MSG
 		};
 
-	if (data->type == CLOUD_CHANNEL_DEVICE_INFO) {
-		msg.endpoint.type = CLOUD_EP_TOPIC_STATE;
-	}
-
 	if (!atomic_get(&send_data_enable) || gps_control_is_active()) {
 		return;
+	}
+
+	if (data->type == CLOUD_CHANNEL_DEVICE_INFO) {
+		msg.endpoint.type = CLOUD_EP_TOPIC_STATE;
 	}
 
 	if (data->type != CLOUD_CHANNEL_DEVICE_INFO) {
@@ -835,11 +837,9 @@ static void pairing_button_register(struct ui_evt *evt)
 static void long_press_handler(struct k_work *work)
 {
 	if (gps_control_is_enabled()) {
-		ui_led_set_pattern(UI_CLOUD_CONNECTED);
 		printk("Stopping GPS\n");
 		gps_control_disable();
 	} else {
-		ui_led_set_color(100, 0, 100, K_SECONDS(1), K_SECONDS(3));
 		printk("Starting GPS\n");
 		gps_control_enable();
 		gps_control_start(K_SECONDS(1));
