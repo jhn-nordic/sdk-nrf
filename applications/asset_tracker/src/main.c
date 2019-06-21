@@ -1021,7 +1021,7 @@ static void sensors_init(void)
 	/* Send sensor data after initialization, as it may be a long time until
 	 * next time if the application is in power optimized mode.
 	 */
-	k_delayed_work_submit(&send_env_data_work, K_NO_WAIT);
+	k_delayed_work_submit(&send_env_data_work, K_SECONDS(5));
 }
 
 /**@brief User interface event handler. */
