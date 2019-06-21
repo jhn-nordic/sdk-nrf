@@ -257,8 +257,6 @@ static void send_gps_data_work_fn(struct k_work *work)
 static void send_env_data_work_fn(struct k_work *work)
 {
 	env_data_send();
-	k_delayed_work_submit(&send_env_data_work,
-		K_SECONDS(CONFIG_ENVIRONMENT_DATA_SEND_INTERVAL));
 }
 
 static void send_button_data_work_fn(struct k_work *work)
@@ -304,6 +302,7 @@ static void gps_trigger_handler(struct device *dev, struct gps_trigger *trigger)
 
 	gps_control_stop(K_NO_WAIT);
 	k_work_submit(&send_gps_data_work);
+	k_delayed_work_submit(&send_env_data_work, K_NO_WAIT);
 }
 
 /**@brief Callback for sensor trigger events */
@@ -537,9 +536,18 @@ static void env_data_send(void)
 		.endpoint.type = CLOUD_EP_TOPIC_MSG
 	};
 
-	if (!atomic_get(&send_data_enable) || gps_control_is_active()) {
+	if (!atomic_get(&send_data_enable)) {
 		return;
 	}
+
+	if (gps_control_is_active()) {
+		k_delayed_work_submit(&send_env_data_work,
+			K_SECONDS(CONFIG_ENVIRONMENT_DATA_BACKOFF_TIME));
+		return;
+	}
+
+	k_delayed_work_submit(&send_env_data_work,
+		K_SECONDS(CONFIG_ENVIRONMENT_DATA_SEND_INTERVAL));
 
 	if(env_sensors_get_temperature(&env_data, NULL) == 0) {
 		if(cloud_encode_env_sensors_data(&env_data, &msg) == 0)
