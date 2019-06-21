@@ -13,9 +13,9 @@
  */
 const struct {} battery_def_include_once;
 
-#define BATTERY_MEAS_ADC_INPUT		NRF_SAADC_INPUT_VDD
-#define BATTERY_MEAS_ADC_GAIN		ADC_GAIN_1_6
-#define BATTERY_MEAS_VOLTAGE_GAIN	6
+#define BATTERY_MEAS_ADC_INPUT		NRF_SAADC_INPUT_AIN2
+#define BATTERY_MEAS_ADC_GAIN		ADC_GAIN_1_4
+#define BATTERY_MEAS_VOLTAGE_GAIN	4
 
 /* Converting measured battery voltage[mV] to State of Charge[%].
  * First element corresponds to CONFIG_DESKTOP_BATTERY_MIN_LEVEL.

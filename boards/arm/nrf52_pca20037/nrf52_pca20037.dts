@@ -5,12 +5,12 @@
  */
 
 /dts-v1/;
-#include <nordic/nrf52832_qfaa.dtsi>
+#include <nordic/nrf52810_qfaa.dtsi>
 
 / {
 	model = "Nordic PCA20037";
-	compatible = "nordic,nrf52832-qfaa",
-		     "nordic,nrf52832";
+	compatible = "nordic,nrf52810-qfaa",
+		     "nordic,nrf52810";
 
 	chosen {
 		zephyr,console = &uart0;
@@ -43,20 +43,27 @@
 	rx-pin = <36>;
 };
 
-&pwm0 {
+&qdec {
 	status = "ok";
-	ch0-pin = <30>;
-	ch0-inverted = "true";
-	ch1-pin = <29>;
-	ch1-inverted = "true";
-	ch2-pin = <28>;
-	ch2-inverted = "true";
+	a-pin = <21>;
+	b-pin = <5>;
+	enable-pin = <6>;
+	led-pin = <0xFFFFFFFF>;
+	led-pre = <0>;
+	steps = <24>;
+};
+
+&spi0 {
+	status = "ok";
+	sck-pin = <9>;
+	mosi-pin = <10>;
+	miso-pin = <10>;
 };
 
 &flash0 {
 	/*
 	 * For more information, see:
-	 * http://docs.zephyrproject.org/devices/dts/flash_partitions.html
+	 * http://docs.zephyrproject.org/latest/guides/dts/index.html#flash-partitions
 	 */
 	partitions {
 		compatible = "fixed-partitions";
@@ -65,23 +72,24 @@
 
 		boot_partition: partition@0 {
 			label = "mcuboot";
-			reg = <0x000000000 0x0000C000>;
+			reg = <0x00000000 0xc000>;
 		};
 		slot0_partition: partition@c000 {
 			label = "image-0";
-			reg = <0x0000C000 0x000036000>;
+			reg = <0x0000C000 0xd000>;
 		};
-		slot1_partition: partition@42000 {
+		slot1_partition: partition@19000 {
 			label = "image-1";
-			reg = <0x00042000 0x000036000>;
+			reg = <0x00019000 0xd000>;
 		};
-		scratch_partition: partition@78000 {
+		scratch_partition: partition@26000 {
 			label = "image-scratch";
-			reg = <0x00078000 0x00004000>;
+			reg = <0x00026000 0x3000>;
 		};
-		storage_partition: partition@7c000 {
+		storage_partition: partition@29000 {
 			label = "storage";
-			reg = <0x0007C000 0x00004000>;
+			reg = <0x00029000 0x00007000>;
 		};
+
 	};
 };

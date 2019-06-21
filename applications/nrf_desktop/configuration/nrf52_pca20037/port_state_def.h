@@ -19,19 +19,11 @@ const struct {} port_state_def_include_once;
 
 
 static const struct pin_state port0_on[] = {
-#if !defined(CONFIG_DESKTOP_LED_ENABLE)
-	{30, 0}, /* LED red */
-	{29, 0}, /* LED green */
-	{28, 0}, /* LED blue */
-#endif
+
 };
 
 static const struct pin_state port0_off[] = {
-#if !defined(CONFIG_DESKTOP_LED_ENABLE)
-	{30, 1}, /* LED red */
-	{29, 1}, /* LED green */
-	{28, 1}, /* LED blue */
-#endif
+
 };
 
 

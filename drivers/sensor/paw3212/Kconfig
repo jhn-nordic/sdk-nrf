@@ -1,0 +1,57 @@
+# Kconfig - Sensor data simulator
+#
+# Copyright (c) 2019 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-BSD-5-Clause-Nordic
+#
+
+menuconfig PAW3212
+	bool "PAW3212 mouse optical sensor"
+	help
+	  Enable PAW3212 mouse optical sensor.
+
+if PAW3212
+
+config PAW3212_DEV_NAME
+	string "PAW3212 device name"
+	default "PAW3212"
+	help
+	  Device name for PAW3212.
+
+config PAW3212_SPI_DEV_NAME
+	string "PAW3212 SPI device"
+	default "SPI_0"
+	help
+	  SPI device to which sensor is connected.
+
+config PAW3212_CS_GPIO_DEV_NAME
+	string "PAW3212 CS GPIO device"
+	default "GPIO_0"
+	help
+	  Device to which CS pin is connected.
+
+config PAW3212_CS_GPIO_PIN
+	int "PAW3212 CS GPIO pin number"
+	default 0
+	help
+	  CS pin number.
+
+config PAW3212_IRQ_GPIO_DEV_NAME
+	string "PAW3212 IRQ GPIO device"
+	default "GPIO_0"
+	help
+	  Device to which IRQ pin is connected.
+
+config PAW3212_IRQ_GPIO_PIN
+	int "PAW3212 IRQ GPIO pin number"
+	default 0
+	help
+	  IRQ pin number.
+
+
+
+module = PAW3212
+module-str = PAW3212
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"
+
+endif #PAW3212

@@ -178,16 +178,12 @@ static int init(void)
 {
 	int err = -ENXIO;
 
-	sensor_dev = device_get_binding("PMW3360");
+	sensor_dev = device_get_binding("PAW3212");
 	if (!sensor_dev) {
 		LOG_ERR("Cannot get motion sensor device");
 		return err;
 	}
 
-	state.option[SENSOR_OPT_CPI] = CONFIG_PMW3360_CPI;
-	state.option[SENSOR_OPT_DOWNSHIFT_RUN] = CONFIG_PMW3360_RUN_DOWNSHIFT_TIME_MS;
-	state.option[SENSOR_OPT_DOWNSHIFT_REST1] = CONFIG_PMW3360_REST1_DOWNSHIFT_TIME_MS;
-	state.option[SENSOR_OPT_DOWNSHIFT_REST2] = CONFIG_PMW3360_REST2_DOWNSHIFT_TIME_MS;
 
 	state.state = STATE_IDLE;
 	module_set_state(MODULE_STATE_READY);

@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: LicenseRef-BSD-5-Clause-Nordic
 #
 
-config  BOARD_NRF52_PCA20037
-	bool "NRF52 PCA20037"
-	depends on SOC_NRF52810_QFAA
+zephyr_library()
+
+zephyr_library_sources(paw3212.c)
+

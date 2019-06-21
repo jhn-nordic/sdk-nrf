@@ -20,33 +20,10 @@ static const char * const port_map[] = {
 };
 
 static const struct button col[] = {
-	{ .port = 0, .pin = 31 },
-	{ .port = 0, .pin = 24 },
-	{ .port = 0, .pin = 23 },
-	{ .port = 0, .pin = 22 },
-	{ .port = 0, .pin = 20 },
-	{ .port = 0, .pin = 21 },
-	{ .port = 0, .pin = 19 },
-	{ .port = 0, .pin = 18 },
 };
 
 static const struct button row[] = {
-	{ .port = 0, .pin = 17 },
-	{ .port = 0, .pin = 11 },
-	{ .port = 0, .pin = 9  },
-	{ .port = 0, .pin = 8  },
-	{ .port = 0, .pin = 7  },
-	{ .port = 0, .pin = 6  },
-	{ .port = 0, .pin = 5  },
-	{ .port = 0, .pin = 3  },
-	{ .port = 0, .pin = 4  },
-	{ .port = 0, .pin = 15 },
-	{ .port = 0, .pin = 0  },
-	{ .port = 0, .pin = 1  },
-	{ .port = 0, .pin = 13 },
-	{ .port = 0, .pin = 14 },
-	{ .port = 0, .pin = 12 },
-	{ .port = 0, .pin = 10 },
-	{ .port = 0, .pin = 16 },
-	{ .port = 0, .pin = 2  },
+	{ .port = 0, .pin = 28 },
+	{ .port = 0, .pin = 25 },
+	{ .port = 0, .pin = 30  },
 };
