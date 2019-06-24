@@ -188,7 +188,7 @@ static uint32_t config_load(uint8_t *config_buffer, uint32_t n_buffer)
 
 static void bsec_thread(void)
 {
-	bsec_iot_loop(sleep, get_timestamp_us, output_ready, state_save, 12);
+	bsec_iot_loop(sleep, get_timestamp_us, output_ready, state_save, 600);
 }
 
 
@@ -252,7 +252,7 @@ int env_sensors_start_polling(void)
 {
 	return_values_init ret;
 
-	ret = bsec_iot_init(BSEC_SAMPLE_RATE_ULP, 1.2f, bus_write, bus_read, sleep, state_load, config_load);
+	ret = bsec_iot_init(BSEC_SAMPLE_RATE_LP, 1.2f, bus_write, bus_read, sleep, state_load, config_load);
 	if (ret.bme680_status)
 	{
 		/* Could not intialize BME680 */
