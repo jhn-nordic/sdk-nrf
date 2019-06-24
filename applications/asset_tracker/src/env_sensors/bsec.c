@@ -8,6 +8,7 @@
 #include <spinlock.h>
 #include <misc/byteorder.h>
 #include "env_sensor_api.h"
+#include <settings/settings.h>
 
 struct device *i2c_master;
 
@@ -59,15 +60,61 @@ static struct env_sensor air_quality_sensor = {
 	},
 };
 
-
 /* size of stack area used by bsec thread */
-#define STACKSIZE 2048
+#define STACKSIZE 4096
 
 /* scheduling priority used by bsec thread */
 #define PRIORITY CONFIG_SYSTEM_WORKQUEUE_PRIORITY
 
 static K_THREAD_STACK_DEFINE(thread_stack, STACKSIZE);
 static struct k_thread thread;
+
+
+uint8_t s_state_buffer[BSEC_MAX_STATE_BLOB_SIZE];
+int32_t s_state_buffer_len=0;
+
+
+static int settings_set(int argc, char **argv, size_t len_rd,
+			settings_read_cb read_cb, void *cb_arg)
+{
+	if (argc == 1) {
+		if (!strcmp(argv[0], "state")) {
+			s_state_buffer_len = len_rd;
+			if(read_cb(cb_arg, s_state_buffer, len_rd) > 0) {
+				return 0;
+			}
+		}
+	}
+	s_state_buffer_len = 0;
+	return -1;
+}
+
+static int enable_settings(void)
+{
+	int err = 0;
+
+	settings_subsys_init();
+	struct settings_handler my_conf = {
+		.name = "bsec",
+		.h_set = settings_set
+	};
+
+	err = settings_register(&my_conf);
+	if (err) {
+		printk("Cannot register settings handler");
+		goto error;
+	}
+
+	/* This module loads settings for all application modules */
+	err = settings_load();
+	if (err) {
+		printk("Cannot load settings");
+		goto error;
+	}
+
+error:
+	return err;
+}
 
 static int8_t bus_write(uint8_t dev_addr, uint8_t reg_addr, uint8_t *reg_data_ptr, uint16_t data_len)
 {
@@ -112,20 +159,20 @@ static void output_ready(int64_t timestamp, float iaq, uint8_t iaq_accuracy, flo
 
 static uint32_t state_load(uint8_t *state_buffer, uint32_t n_buffer)
 {
-	// ...
-	// Load a previous library state from non-volatile memory, if available.
-	//
-	// Return zero if loading was unsuccessful or no state was available, 
-	// otherwise return length of loaded state string.
-	// ...
-	return 0;
+	if((s_state_buffer_len > 0) && (s_state_buffer_len <= n_buffer))
+	{
+		memcpy(state_buffer, s_state_buffer, s_state_buffer_len);
+		return s_state_buffer_len;
+	}
+	else
+	{
+		return 0;
+	}
 }
 
 static void state_save(const uint8_t *state_buffer, uint32_t length)
 {
-	// ...
-	// Save the string to non-volatile memory
-	// ...
+	settings_save_one("bsec/state", state_buffer, length);
 }
  
 static uint32_t config_load(uint8_t *config_buffer, uint32_t n_buffer)
@@ -141,7 +188,7 @@ static uint32_t config_load(uint8_t *config_buffer, uint32_t n_buffer)
 
 static void bsec_thread(void)
 {
-	bsec_iot_loop(sleep, get_timestamp_us, output_ready, state_save, 10000);
+	bsec_iot_loop(sleep, get_timestamp_us, output_ready, state_save, 12);
 }
 
 
@@ -176,7 +223,7 @@ int env_sensors_get_pressure(env_sensor_data_t *sensor_data, u64_t *sensor_id)
 	k_spinlock_key_t key = k_spin_lock(&pressure_sensor.lock);
 	memcpy(sensor_data, &(pressure_sensor.sensor),sizeof(pressure_sensor.sensor));
 	k_spin_unlock(&pressure_sensor.lock, key);
-	return 0;	
+	return 0;
 }
 
 int env_sensors_get_air_quality(env_sensor_data_t *sensor_data, u64_t *sensor_id)
@@ -187,7 +234,7 @@ int env_sensors_get_air_quality(env_sensor_data_t *sensor_data, u64_t *sensor_id
 	k_spinlock_key_t key = k_spin_lock(&air_quality_sensor.lock);
 	memcpy(sensor_data, &(air_quality_sensor.sensor),sizeof(air_quality_sensor.sensor));
 	k_spin_unlock(&air_quality_sensor.lock, key);
-	return 0;	
+	return 0;
 }
 
 int env_sensors_init(void)
@@ -197,14 +244,15 @@ int env_sensors_init(void)
 		printk("cannot bind to BME680\n");
 		return -EINVAL;
 	}
-	return 0;
+
+	return enable_settings();
 }
 
 int env_sensors_start_polling(void)
 {
 	return_values_init ret;
 
-	ret = bsec_iot_init(BSEC_SAMPLE_RATE_ULP, 3.0f, bus_write, bus_read, sleep, state_load, config_load);
+	ret = bsec_iot_init(BSEC_SAMPLE_RATE_ULP, 1.2f, bus_write, bus_read, sleep, state_load, config_load);
 	if (ret.bme680_status)
 	{
 		/* Could not intialize BME680 */
