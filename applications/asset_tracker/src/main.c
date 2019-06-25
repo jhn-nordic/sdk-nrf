@@ -432,11 +432,8 @@ static void battery_monitor_check(struct k_work *work)
 		bat_level_acceptable = false;
 	} else if (bat_charge >= CONFIG_BATTERY_MONITOR_THRESHOLD &&
 	   bat_level_acceptable == false) {
-		ui_led_set_color(0,
-				 CONFIG_BATTERY_MONITOR_GREEN_VALUE,
-				 0,
-				 UI_LED_ON_PERIOD_NORMAL,
-				 UI_LED_OFF_PERIOD_NORMAL);
+		//restore UI state when battery level is ok
+		ui_led_set_pattern(ui_led_get_pattern());
 		bat_level_acceptable = true;
 	}
 #if CONFIG_MODEM_INFO
