@@ -304,6 +304,9 @@ config ENVIRONMENT_DATA_BACKOFF_TIME
 	  Time in seconds before retrying to send environment sensor data if
 	  the GPS is active.
 
+config USE_BME680_BSEC
+	bool "Use Bosch BME680 BSEC lib"
+
 choice
 	prompt "Temperature measurement device"
 	default TEMP_USE_SIM
