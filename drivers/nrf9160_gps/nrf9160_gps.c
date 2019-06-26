@@ -31,6 +31,8 @@ LOG_MODULE_REGISTER(nrf9160_gps, CONFIG_NRF9160_GPS_LOG_LEVEL);
 #define AT_CFUN_1			"AT+CFUN=1"
 #define FUNCTIONAL_MODE_ENABLED		1
 
+static bool gps_stopped = true;
+
 struct gps_drv_data {
 	gps_trigger_handler_t trigger_handler;
 	struct gps_trigger trigger;
@@ -223,16 +225,16 @@ static int enable_gps(struct device *dev)
 	struct at_param_list at_response_list = {0};
 	u16_t gps_param_value, functional_mode;
 
-#if CONFIG_NRF9160_GPS_SET_MAGPIO
-	err = at_cmd_write(CONFIG_NRF9160_GPS_MAGPIO_STRING,
-			   buf, sizeof(buf), NULL);
-	if (err) {
-		LOG_ERR("Could not confiugure MAGPIO, error: %d", err);
-		return err;
-	}
+// #if CONFIG_NRF9160_GPS_SET_MAGPIO
+// 	err = at_cmd_write(CONFIG_NRF9160_GPS_MAGPIO_STRING,
+// 			   buf, sizeof(buf), NULL);
+// 	if (err) {
+// 		LOG_ERR("Could not confiugure MAGPIO, error: %d", err);
+// 		return err;
+// 	}
 
-	LOG_DBG("MAGPIO set: %s", log_strdup(CONFIG_NRF9160_GPS_MAGPIO_STRING));
-#endif /* CONFIG_NRF9160_GPS_SET_MAGPIO */
+// 	LOG_DBG("MAGPIO set: %s", log_strdup(CONFIG_NRF9160_GPS_MAGPIO_STRING));
+// #endif /* CONFIG_NRF9160_GPS_SET_MAGPIO */
 
 	err = at_cmd_write(AT_XSYSTEMMODE_REQUEST, buf, sizeof(buf), NULL);
 	if (err) {
@@ -323,6 +325,8 @@ static int enable_gps(struct device *dev)
 		LOG_DBG("Functional mode set to %d", FUNCTIONAL_MODE_ENABLED);
 	}
 
+	at_params_list_free(&at_response_list);
+
 	return 0;
 }
 
@@ -333,6 +337,7 @@ static int start(struct device *dev)
 	u16_t fix_retry     = 0;
 	u16_t fix_interval  = 1;
 	u16_t nmea_mask     = 0;
+	static int gps_op_count = 0;
 
 #ifdef CONFIG_NRF9160_GPS_NMEA_GSV
 	nmea_mask |= NRF_CONFIG_NMEA_GSV_MASK;
@@ -349,6 +354,8 @@ static int start(struct device *dev)
 #ifdef CONFIG_NRF9160_GPS_NMEA_RMC
 	nmea_mask |= NRF_CONFIG_NMEA_RMC_MASK;
 #endif
+
+	gps_stopped = true;
 
 	if (enable_gps(dev) != 0) {
 		LOG_ERR("Failed to enable GPS");
@@ -415,6 +422,10 @@ static int start(struct device *dev)
 	k_sem_give(&drv_data->thread_run_sem);
 
 	LOG_DBG("GPS operational");
+	gps_op_count++;
+	LOG_DBG("Counter: %d", gps_op_count);
+
+	gps_stopped = false;
 
 	return retval;
 }
@@ -429,6 +440,19 @@ static int init(struct device *dev)
 	k_mutex_init(&drv_data->trigger_mutex);
 
 	init_thread(dev);
+
+	#if CONFIG_NRF9160_GPS_SET_MAGPIO
+		int err;
+		char buf[50] = {0};
+		err = at_cmd_write(CONFIG_NRF9160_GPS_MAGPIO_STRING,
+				buf, sizeof(buf), NULL);
+		if (err) {
+			LOG_ERR("Could not confiugure MAGPIO, error: %d", err);
+			return err;
+		}
+
+		LOG_DBG("MAGPIO set: %s", log_strdup(CONFIG_NRF9160_GPS_MAGPIO_STRING));
+	#endif /* CONFIG_NRF9160_GPS_SET_MAGPIO */
 
 	return 0;
 }
@@ -459,22 +483,29 @@ static int channel_get(struct device *dev, enum gps_channel chan,
 
 static int stop(struct device *dev)
 {
+
 	struct gps_drv_data *drv_data = dev->driver_data;
 	int retval;
+	
+	if (!gps_stopped) {
+		LOG_DBG("Stopping GPS");
 
-	LOG_DBG("Stopping GPS");
+		atomic_set(&drv_data->gps_is_active, 0);
 
-	atomic_set(&drv_data->gps_is_active, 0);
+		retval = nrf_setsockopt(drv_data->socket,
+					NRF_SOL_GNSS,
+					NRF_SO_GNSS_STOP,
+					NULL,
+					0);
 
-	retval = nrf_setsockopt(drv_data->socket,
-				NRF_SOL_GNSS,
-				NRF_SO_GNSS_STOP,
-				NULL,
-				0);
-
-	if (retval != 0) {
-		LOG_ERR("Failed to stop GPS");
-		return -EIO;
+		if (retval != 0) {
+			gps_stopped = false;
+			LOG_ERR("Failed to stop GPS %d", retval);
+			return -EIO;
+		}
+		gps_stopped	= true;
+	} else {
+		LOG_DBG("GPS already stopped");
 	}
 
 	return 0;
@@ -516,5 +547,5 @@ static const struct gps_driver_api gps_api_funcs = {
 };
 
 DEVICE_AND_API_INIT(nrf9160_gps, CONFIG_NRF9160_GPS_DEV_NAME, init,
-		    &gps_drv_data, NULL, POST_KERNEL,
+		    &gps_drv_data, NULL, APPLICATION,
 		    CONFIG_NRF9160_GPS_INIT_PRIO, &gps_api_funcs);
