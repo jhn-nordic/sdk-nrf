@@ -46,6 +46,30 @@
 #define ADP536X_OC_CHG_THRESHOLD_300mA	0x06
 #define ADP536X_OC_CHG_THRESHOLD_400mA	0x07
 
+/* Definition of low state of charge thresholds, in percent. */
+#define ADP536X_SOC_LOW_THRESHOLD_6	0x00
+#define ADP536X_SOC_LOW_THRESHOLD_11	0x01
+#define ADP536X_SOC_LOW_THRESHOLD_21	0x02
+#define ADP536X_SOC_LOW_THRESHOLD_31	0x03
+
+/* Definition of charger states */
+#define ADP536X_CHG_STAT_OFF		0x00
+#define ADP536X_CHG_STAT_TRICKLE	0x01
+#define ADP536X_CHG_STAT_FAST_CC	0x02
+#define ADP536X_CHG_STAT_FAST_CV	0x03
+#define ADP536X_CHG_STAT_COMPLETE	0x04
+#define ADP536X_CHG_STAT_LDO_MODE	0x05
+#define ADP536X_CHG_STAT_TIMER_EXP	0x06
+#define ADP536X_CHG_STAT_BAT_DET	0x07
+
+/* Definition of battery states. GT = greater than (only for charging). */
+#define ADP536X_BAT_STAT_NORMAL		0x00
+#define ADP536X_BAT_STAT_NO_BAT		0x01
+#define ADP536X_BAT_STAT_GT_0		0x02
+#define ADP536X_BAT_STAT_GT_VTRK	0x03
+#define ADP536X_BAT_STAT_GT_VWEAK	0x04
+#define ADP536X_BAT_STAT_GT_VOVCHG	0x05
+
 /**
  * @brief Initialize ADP536X.
  *
@@ -110,6 +134,17 @@ int adp536x_charging_enable(bool enable);
 int adp536x_charger_status_1_read(u8_t *buf);
 
 /**
+ * @brief Read the CHARGER_STATUS field.
+ *
+ * @param[out] buf The read value of the CHARGER_STATUS field.
+ *
+ * @retval 0 If the operation was successful.
+ *           Otherwise, a (negative) error code is returned.
+ */
+
+int adp536x_charger_status_read(u8_t *buf);
+
+/**
  * @brief Read the STATUS2 register.
  *
  * @param[out] buf The read value of the STATUS2 register.
@@ -120,6 +155,26 @@ int adp536x_charger_status_1_read(u8_t *buf);
 int adp536x_charger_status_2_read(u8_t *buf);
 
 /**
+ * @brief Read the FAULTS register.
+ *
+ * @param[out] buf The read value of the FAULTS register.
+ *
+ * @retval 0 If the operation was successful.
+ *           Otherwise, a (negative) error code is returned.
+ */
+int adp536x_faults_read(u8_t *buf);
+
+/**
+ * @brief Read the PGOOD_STATUS register.
+ *
+ * @param[out] buf The read value of the PGOOD_STATUS register.
+ *
+ * @retval 0 If the operation was successful.
+ *           Otherwise, a (negative) error code is returned.
+ */
+int adp536x_pgood_status_read(u8_t *buf);
+
+/**
  * @brief Read the BAT_SOC register.
  *
  * @param[out] buf The read value of the BAT_SOC register.
@@ -128,6 +183,16 @@ int adp536x_charger_status_2_read(u8_t *buf);
  *           Otherwise, a (negative) error code is returned.
  */
 int adp536x_bat_soc_read(u8_t *buf);
+
+/**
+ * @brief Read the VBAT_READ battery voltage registers.
+ *
+ * @param[out] buf The last measuered battery voltage.
+ *
+ * @retval 0 If the operation was successful.
+ *           Otherwise, a (negative) error code is returned.
+ */
+int adp536x_vbat_read(u16_t *buf);
 
 /**
  * @brief Enable charge hiccup protection mode.
@@ -174,6 +239,14 @@ int adp536x_buck_1v8_set(void);
  *           Otherwise, a (negative) error code is returned.
  */
 int adp536x_buckbst_3v3_set(void);
+
+/**
+ * @brief Place the ADP536x in shipment mode (shutdown).
+ *
+ * @retval 0 If the operation was successful.
+ *           Otherwise, a (negative) error code is returned.
+ */
+int adp536x_en_shipmode(void);
 
 /**
  * @brief Reset the device to its default values.
@@ -244,5 +317,15 @@ int adp536x_fuel_gauge_enable_sleep_mode(bool enable);
  *           Otherwise, a (negative) error code is returned.
  */
 int adp536x_fuel_gauge_update_rate_set(u8_t rate);
+
+/**
+ * @brief Set the low state of charge threshold.
+ *
+ * @param[in] rate Set the fuel gauge update rate.
+ *
+ * @retval 0 If the operation was successful.
+ *           Otherwise, a (negative) error code is returned.
+ */
+int adp536x_soc_low_threshold_set(u8_t value);
 
 #endif /* ADP536X_H_ */

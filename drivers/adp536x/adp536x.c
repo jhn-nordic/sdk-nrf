@@ -26,11 +26,16 @@
 #define ADP536X_BAT_OC_CHG				0x15
 #define ADP536X_BAT_CAP					0x20
 #define ADP536X_BAT_SOC					0x21
+#define ADP536X_VBAT_READ_H				0x25
+#define ADP536X_VBAT_READ_L				0x26
 #define ADP536X_FUEL_GAUGE_MODE				0x27
 #define ADP536X_BUCK_CFG				0x29
 #define ADP536X_BUCK_OUTPUT				0x2A
 #define ADP536X_BUCKBST_CFG				0x2B
 #define ADP536X_BUCKBST_OUTPUT				0x2C
+#define ADP536X_FAULTS					0x2E
+#define ADP536X_PGOOD_STATUS				0x2F
+#define ADP536X_SHIPMODE				0x36
 #define ADP536X_DEFAULT_SET_REG				0x37
 
 /* Manufacturer and model ID register. */
@@ -99,6 +104,18 @@
 #define ADP536X_CHG_FUNC_EN_CHG_MSK			BIT(0)
 #define ADP536X_CHG_FUNC_EN_CHG(x)			((x) & 0x01)
 
+/* Charger status 1 register */
+#define ADP5061_CHG_STATUS_1_VBUS_OV(x)			(((x) >> 7) & 0x1)
+#define ADP5061_CHG_STATUS_1_ADPICHG(x)			(((x) >> 6) & 0x1)
+#define ADP5061_CHG_STATUS_1_VBUS_ILIM(x)		(((x) >> 5) & 0x1)
+#define ADP5061_CHG_STATUS_1_CHG_STATUS(x)		(((x) >> 0) & 0x7)
+
+/* Charger status 2 register */
+#define ADP5061_CHG_STATUS_2_THR_STATUS(x)		(((x) >> 5) & 0x7)
+#define ADP5061_CHG_STATUS_2_BAT_OV_STAT(x)		(((x) >> 4) & 0x1)
+#define ADP5061_CHG_STATUS_2_BAT_UV_STAT(x)		(((x) >> 3) & 0x1)
+#define ADP5061_CHG_STATUS_2_BAT_CHG_STATUS(x)		(((x) >> 0) & 0x7)
+
 /* Battery protection control register. */
 #define ADP536X_BAT_PROTECT_CTRL_ISOFET_OVCHG_MSK	BIT(4)
 #define ADP536X_BAT_PROTECT_CTRL_ISOFET_OVCHG(x)	(((x) & 0x01) << 4)
@@ -155,6 +172,10 @@
 /* Buck/boost configure register. */
 #define ADP536X_BUCKBST_CFG_EN_BUCKBST_MSK		BIT(0)
 #define ADP536X_BUCKBST_CFG_EN_BUCKBST(x)		(((x) & 0x01) << 0)
+
+/* Shipment mode (shutdown) register. */
+#define ADP536X_EN_SHIPMODE_MSK				BIT(0)
+#define ADP536X_EN_SHIPMODE(x)				(((x) & 0x01) << 0)
 
 /* DEFAULT_SET register. */
 #define ADP536X_DEFAULT_SET_MSK				GENMASK(7, 0)
@@ -231,14 +252,57 @@ int adp536x_charger_status_1_read(u8_t *buf)
 	return adp536x_reg_read(ADP536X_CHG_STATUS_1, buf);
 }
 
+int adp536x_charger_status_read(u8_t *buf){
+	int err = adp536x_reg_read(ADP536X_CHG_STATUS_1, buf);
+	
+	if (err) {
+		return err;
+	}
+
+	*buf = ADP5061_CHG_STATUS_1_CHG_STATUS(*buf);
+	return 0;
+}
+
 int adp536x_charger_status_2_read(u8_t *buf)
 {
 	return adp536x_reg_read(ADP536X_CHG_STATUS_2, buf);
 }
 
+int adp536x_faults_read(u8_t *buf)
+{
+	return adp536x_reg_read(ADP536X_FAULTS, buf);
+}
+
+int adp536x_pgood_status_read(u8_t *buf)
+{
+	return adp536x_reg_read(ADP536X_PGOOD_STATUS, buf);
+}
+
 int adp536x_bat_soc_read(u8_t *buf)
 {
 	return adp536x_reg_read(ADP536X_BAT_SOC, buf);
+}
+
+int adp536x_vbat_read(u16_t *buf)
+{
+	int err;
+	u8_t vbat_h;
+	u8_t vbat_l;
+	
+	err = adp536x_reg_read(ADP536X_VBAT_READ_H, &vbat_h);
+	if (err) {
+		return err;
+	}
+	
+	err = adp536x_reg_read(ADP536X_VBAT_READ_L, &vbat_l);
+	if (err) {
+		return err;
+	}
+
+	/* Move the bits according to ADP536X datasheet */
+	*buf = (u16_t) vbat_h << 5 | (u16_t) vbat_l >> 3;
+
+	return 0;
 }
 
 int adp536x_oc_dis_hiccup_set(bool enable)
@@ -274,6 +338,13 @@ int adp536x_fuel_gauge_set(bool enable)
 	return adp536x_reg_write_mask(ADP536X_FUEL_GAUGE_MODE,
 				      ADP536X_FUEL_GAUGE_MODE_EN_FG_MSK,
 				      ADP536X_FUEL_GAUGE_MODE_EN_FG(enable));
+}
+
+int adp536x_soc_low_threshold_set(u8_t value)
+{
+	return adp536x_reg_write_mask(ADP536X_FUEL_GAUGE_MODE,
+				ADP536X_FUEL_GAUGE_MODE_SOC_LOW_TH_MSK,
+				ADP536X_FUEL_GAUGE_MODE_SOC_LOW_TH(value));
 }
 
 int adp536x_fuel_gauge_enable_sleep_mode(bool enable)
@@ -332,6 +403,13 @@ static int adp536x_default_set(void)
 	return adp536x_reg_write_mask(ADP536X_DEFAULT_SET_REG,
 					ADP536X_DEFAULT_SET_MSK,
 					ADP536X_DEFAULT_SET(0x7F));
+}
+
+int adp536x_en_shipmode(void)
+{
+	return adp536x_reg_write_mask(ADP536X_SHIPMODE,
+					ADP536X_EN_SHIPMODE_MSK,
+					ADP536X_EN_SHIPMODE(0x01));
 }
 
 int adp536x_factory_reset(void)
