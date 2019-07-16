@@ -1325,7 +1325,7 @@ cJSON *cJSON_CreateObject(void)
 }
 
 /* Create Arrays: */
-cJSON *cJSON_CreateIntArray(const int *numbers, int count)
+cJSON *cJSON_CreateIntArray(int *numbers, int count)
 {
 	int i;
 	cJSON *n = 0, *p = 0, *a = cJSON_CreateArray();
@@ -1353,7 +1353,7 @@ cJSON *cJSON_CreateFloatArray(const float *numbers, int count)
 	}
 	return a;
 }
-cJSON *cJSON_CreateDoubleArray(const double *numbers, int count)
+cJSON *cJSON_CreateDoubleArray(double *numbers, int count)
 {
 	int i;
 	cJSON *n = 0, *p = 0, *a = cJSON_CreateArray();
