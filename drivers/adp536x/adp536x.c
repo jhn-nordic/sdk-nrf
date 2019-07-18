@@ -118,11 +118,11 @@
 
 /* Battery fuel gauge mode register. */
 #define ADP536X_FUEL_GAUGE_MODE_SOC_LOW_TH_MSK		GENMASK(7, 6)
-#define ADP536X_FUEL_GAUGE_MODE_SOC_LOW_TH(x)		(((x) & 0xC0) << 6)
+#define ADP536X_FUEL_GAUGE_MODE_SOC_LOW_TH(x)		(((x) & 0x03) << 6)
 #define ADP536X_FUEL_GAUGE_MODE_SLP_CURR_MSK		GENMASK(5, 4)
-#define ADP536X_FUEL_GAUGE_MODE_SLP_CURR(x)		(((x) & 0x30) << 4)
+#define ADP536X_FUEL_GAUGE_MODE_SLP_CURR(x)		(((x) & 0x03) << 4)
 #define ADP536X_FUEL_GAUGE_MODE_SLP_TIME_MSK		GENMASK(3, 2)
-#define ADP536X_FUEL_GAUGE_MODE_SLP_TIME(x)		(((x) & 0x0C) << 2)
+#define ADP536X_FUEL_GAUGE_MODE_SLP_TIME(x)		(((x) & 0x03) << 2)
 #define ADP536X_FUEL_GAUGE_MODE_FG_MSK			BIT(1)
 #define ADP536X_FUEL_GAUGE_MODE_FG(x)			(((x) & 0x01) << 1)
 #define ADP536X_FUEL_GAUGE_MODE_EN_FG_MSK		BIT(0)
