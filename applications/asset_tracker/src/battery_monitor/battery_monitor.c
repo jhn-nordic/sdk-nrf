@@ -52,5 +52,31 @@ void battery_monitor_init(void)
 
 int battery_monitor_read(u8_t *buf)
 {
-	return adp536x_bat_soc_read(buf);
+	u8_t soc;
+	int err = adp536x_bat_soc_read(&soc);
+	
+	if (err) {
+		return err;
+	}
+	
+	u8_t status;
+	err = adp536x_charger_status_read(&status);
+	
+	if (err) {
+		return err;
+	}
+
+	/* Work around a quirk where the ADP536x will report SoC=0 while charging. */
+	if (soc == 0) {
+		if (status == ADP536X_CHG_STAT_COMPLETE) {
+			*buf = 100;
+		} else if (status == ADP536X_CHG_STAT_FAST_CV) {
+			*buf = 99;
+		} else {
+			*buf = soc;
+		}
+	} else {
+		*buf = soc;
+	}
+	return 0;
 }
