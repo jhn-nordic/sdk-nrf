@@ -35,7 +35,10 @@
 
 static const char *ep;
 
-const char *cJSON_GetErrorPtr(void) { return ep; }
+const char *cJSON_GetErrorPtr(void)
+{
+	return ep;
+}
 
 static int cJSON_strcasecmp(const char *s1, const char *s2)
 {
@@ -130,7 +133,7 @@ static const char *parse_number(cJSON *item, const char *num)
 		do
 			n = (n * 10.0) + (*num++ - '0'), scale--;
 		while (*num >= '0' && *num <= '9');
-	}				/* Fractional part? */
+	} /* Fractional part? */
 	if (*num == 'e' || *num == 'E') /* Exponent? */
 	{
 		num++;
@@ -315,8 +318,8 @@ static unsigned parse_hex4(const char *str)
 }
 
 /* Parse the input text into an unescaped cstring, and populate item. */
-static const unsigned char firstByteMark[7] = {0x00, 0x00, 0xC0, 0xE0,
-					       0xF0, 0xF8, 0xFC};
+static const unsigned char firstByteMark[7] = { 0x00, 0x00, 0xC0, 0xE0,
+						0xF0, 0xF8, 0xFC };
 static const char *parse_string(cJSON *item, const char *str)
 {
 	const char *ptr = str + 1;
@@ -434,9 +437,9 @@ static char *print_string_ptr(const char *str, printbuffer *p)
 
 	for (ptr = str; *ptr; ptr++)
 		flag |= ((*ptr > 0 && *ptr < 32) || (*ptr == '\"') ||
-			 (*ptr == '\\'))
-				? 1
-				: 0;
+			 (*ptr == '\\')) ?
+				1 :
+				0;
 	if (!flag) {
 		len = ptr - str;
 		if (p)
@@ -581,8 +584,14 @@ cJSON *cJSON_Parse(const char *value)
 }
 
 /* Render a cJSON item/entity/structure to text. */
-char *cJSON_Print(cJSON *item) { return print_value(item, 0, 1, 0); }
-char *cJSON_PrintUnformatted(cJSON *item) { return print_value(item, 0, 0, 0); }
+char *cJSON_Print(cJSON *item)
+{
+	return print_value(item, 0, 1, 0);
+}
+char *cJSON_PrintUnformatted(cJSON *item)
+{
+	return print_value(item, 0, 0, 0);
+}
 
 char *cJSON_PrintBuffered(cJSON *item, int prebuffer, int fmt)
 {
@@ -592,7 +601,6 @@ char *cJSON_PrintBuffered(cJSON *item, int prebuffer, int fmt)
 	p.offset = 0;
 	return print_value(item, 0, fmt, &p);
 }
-
 
 /* Parser core - when encountering text, process appropriately. */
 static const char *parse_value(cJSON *item, const char *value)
@@ -1325,7 +1333,7 @@ cJSON *cJSON_CreateObject(void)
 }
 
 /* Create Arrays: */
-cJSON *cJSON_CreateIntArray(int *numbers, int count)
+cJSON *cJSON_CreateIntArray(const int *numbers, int count)
 {
 	int i;
 	cJSON *n = 0, *p = 0, *a = cJSON_CreateArray();
@@ -1353,7 +1361,7 @@ cJSON *cJSON_CreateFloatArray(const float *numbers, int count)
 	}
 	return a;
 }
-cJSON *cJSON_CreateDoubleArray(double *numbers, int count)
+cJSON *cJSON_CreateDoubleArray(const double *numbers, int count)
 {
 	int i;
 	cJSON *n = 0, *p = 0, *a = cJSON_CreateArray();
