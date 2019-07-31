@@ -49,14 +49,14 @@ typedef struct cJSON {
 	struct cJSON *next, *prev; /* next/prev allow you to walk array/object
 				      chains. Alternatively, use
 				      GetArraySize/GetArrayItem/GetObjectItem */
-	struct cJSON *child;       /* An array or object item will have a child
+	struct cJSON *child; /* An array or object item will have a child
 				      pointer pointing to a chain of the items in the
 				      array/object. */
 
 	int type; /* The type of the item, as above. */
 
-	char *valuestring;  /* The item's string, if type==cJSON_String */
-	int valueint;       /* The item's number, if type==cJSON_Number */
+	char *valuestring; /* The item's string, if type==cJSON_String */
+	int valueint; /* The item's number, if type==cJSON_Number */
 	double valuedouble; /* The item's number, if type==cJSON_Number */
 
 	char *string; /* The item's name string, if this item is the child of,
@@ -70,7 +70,6 @@ typedef struct cJSON_Hooks {
 
 /* Supply malloc, realloc and free functions to cJSON */
 extern void cJSON_InitHooks(cJSON_Hooks *hooks);
-
 
 /* Supply a block of JSON, and this returns a cJSON object you can interrogate.
  * Call cJSON_Delete when finished. */
@@ -112,9 +111,9 @@ extern cJSON *cJSON_CreateArray(void);
 extern cJSON *cJSON_CreateObject(void);
 
 /* These utilities create an Array of count items. */
-extern cJSON *cJSON_CreateIntArray(int *numbers, int count);
+extern cJSON *cJSON_CreateIntArray(const int *numbers, int count);
 extern cJSON *cJSON_CreateFloatArray(const float *numbers, int count);
-extern cJSON *cJSON_CreateDoubleArray(double *numbers, int count);
+extern cJSON *cJSON_CreateDoubleArray(const double *numbers, int count);
 extern cJSON *cJSON_CreateStringArray(const char **strings, int count);
 
 /* Append item to the specified array/object. */
