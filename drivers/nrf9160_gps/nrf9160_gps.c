@@ -31,8 +31,6 @@ LOG_MODULE_REGISTER(nrf9160_gps, CONFIG_NRF9160_GPS_LOG_LEVEL);
 #define AT_CFUN_1			"AT+CFUN=1"
 #define FUNCTIONAL_MODE_ENABLED		1
 
-static bool gps_stopped = true;
-
 struct gps_drv_data {
 	gps_trigger_handler_t trigger_handler;
 	struct gps_trigger trigger;
@@ -94,30 +92,30 @@ static void print_satellite_stats(nrf_gnss_data_frame_t *pvt_data)
 	u8_t  in_fix           = 0;
 	u8_t  unhealthy        = 0;
 
-	for (int i = 0; i < NRF_GNSS_MAX_SATELLITES; ++i) {
+ 	for (int i = 0; i < NRF_GNSS_MAX_SATELLITES; ++i) {
 
-		if ((pvt_data->pvt.sv[i].sv > 0) &&
+ 		if ((pvt_data->pvt.sv[i].sv > 0) &&
 		    (pvt_data->pvt.sv[i].sv < 33)) {
 
-			tracked++;
+ 			tracked++;
 
-			if (pvt_data->pvt.sv[i].flags &
+ 			if (pvt_data->pvt.sv[i].flags &
 					NRF_GNSS_PVT_FLAG_FIX_VALID_BIT) {
 				in_fix++;
 			}
 
-			if (pvt_data->pvt.sv[i].flags &
+ 			if (pvt_data->pvt.sv[i].flags &
 					NRF_GNSS_SV_FLAG_UNHEALTHY) {
 				unhealthy++;
 			}
 		}
 	}
 
-	LOG_DBG("Tracking: %d Using: %d Unhealthy: %d", tracked,
+ 	LOG_DBG("Tracking: %d Using: %d Unhealthy: %d", tracked,
 						       in_fix,
 						       unhealthy);
 
-	LOG_DBG("Seconds since last fix %lld",
+ 	LOG_DBG("Seconds since last fix %lld",
 			(k_uptime_get() - fix_timestamp) / 1000);
 }
 
@@ -132,7 +130,7 @@ wait:
 	k_sem_take(&drv_data->thread_run_sem, K_FOREVER);
 
 	while (true) {
-		len = recv(drv_data->socket, &raw_gps_data,
+		len = nrf_recv(drv_data->socket, &raw_gps_data,
 			       sizeof(nrf_gnss_data_frame_t), 0);
 		if (len <= 0) {
 			/* Is the GPS stopped, causing this error? */
@@ -231,7 +229,7 @@ static int enable_gps(struct device *dev)
 		return err; /* No need to clean up; the list was never init'd */
 	}
 
-	err = at_cmd_write(AT_XSYSTEMMODE_REQUEST, buf, sizeof(buf), NULL);
+ 	err = at_cmd_write(AT_XSYSTEMMODE_REQUEST, buf, sizeof(buf), NULL);
 	if (err) {
 		LOG_ERR("Could not get modem's system mode");
 		err = -EIO;
@@ -255,40 +253,40 @@ static int enable_gps(struct device *dev)
 		goto enable_gps_clean_exit;
 	}
 
-	if (gps_param_value != 1) {
+ 	if (gps_param_value != 1) {
 		char cmd[sizeof(AT_XSYSTEMMODE_PROTO)];
 		size_t len;
 		u16_t values[AT_XSYSTEMMODE_PARAMS_COUNT] = {0};
 
-		LOG_DBG("GPS mode is not enabled, attempting to enable it");
+ 		LOG_DBG("GPS mode is not enabled, attempting to enable it");
 
 		for (size_t i = 0; i < AT_XSYSTEMMODE_PARAMS_COUNT; i++) {
 			at_params_short_get(&at_resp_list, i, &values[i]);
 		}
 
-		values[AT_XSYSTEMMODE_GPS_PARAM_INDEX] = 1;
+ 		values[AT_XSYSTEMMODE_GPS_PARAM_INDEX] = 1;
 
-		len = snprintf(cmd, sizeof(cmd), AT_XSYSTEMMODE_PROTO,
+ 		len = snprintf(cmd, sizeof(cmd), AT_XSYSTEMMODE_PROTO,
 			       values[0], values[1], values[2], values[3]);
 
-		LOG_DBG("Sending AT command: %s", log_strdup(cmd));
+ 		LOG_DBG("Sending AT command: %s", log_strdup(cmd));
 
-		err = at_cmd_write(cmd, NULL, 0, NULL);
+ 		err = at_cmd_write(cmd, NULL, 0, NULL);
 		if (err) {
 			LOG_ERR("Could not enable GPS mode, error: %d", err);
 			goto enable_gps_clean_exit;
 		}
 	}
 
-	LOG_DBG("GPS mode is enabled");
+ 	LOG_DBG("GPS mode is enabled");
 
-	err = at_cmd_write(AT_CFUN_REQUEST, buf, sizeof(buf), NULL);
+ 	err = at_cmd_write(AT_CFUN_REQUEST, buf, sizeof(buf), NULL);
 	if (err) {
 		LOG_ERR("Could not get functional mode, error: %d", err);
 		goto enable_gps_clean_exit;
 	}
 
-	err = at_parser_max_params_from_str(
+ 	err = at_parser_max_params_from_str(
 		&buf[sizeof(AT_CFUN_RESPONSE)],
 		&at_resp_list, 1);
 	if (err) {
@@ -310,7 +308,7 @@ static int enable_gps(struct device *dev)
 		LOG_DBG("Functional mode was %d, attemping to set to %d",
 			functional_mode, FUNCTIONAL_MODE_ENABLED);
 
-		err = at_cmd_write(AT_CFUN_1, NULL, 0, NULL);
+ 		err = at_cmd_write(AT_CFUN_1, NULL, 0, NULL);
 		if (err) {
 			LOG_ERR("Could not set functional mode to %d",
 				FUNCTIONAL_MODE_ENABLED);
@@ -348,8 +346,6 @@ static int start(struct device *dev)
 #ifdef CONFIG_NRF9160_GPS_NMEA_RMC
 	nmea_mask |= NRF_CONFIG_NMEA_RMC_MASK;
 #endif
-
-	gps_stopped = true;
 
 	if (enable_gps(dev) != 0) {
 		LOG_ERR("Failed to enable GPS");
@@ -419,8 +415,6 @@ static int start(struct device *dev)
 	gps_op_count++;
 	LOG_DBG("Counter: %d", gps_op_count);
 
-	gps_stopped = false;
-
 	return retval;
 }
 
@@ -480,32 +474,25 @@ static int channel_get(struct device *dev, enum gps_channel chan,
 
 static int stop(struct device *dev)
 {
-
 	struct gps_drv_data *drv_data = dev->driver_data;
 	int retval;
-	
-	if (!gps_stopped) {
-		LOG_DBG("Stopping GPS");
 
-		atomic_set(&drv_data->gps_is_active, 0);
+ 	LOG_DBG("Stopping GPS");
 
-		retval = nrf_setsockopt(drv_data->socket,
-					NRF_SOL_GNSS,
-					NRF_SO_GNSS_STOP,
-					NULL,
-					0);
+ 	atomic_set(&drv_data->gps_is_active, 0);
 
-		if (retval != 0) {
-			gps_stopped = false;
-			LOG_ERR("Failed to stop GPS %d", retval);
-			return -EIO;
-		}
-		gps_stopped	= true;
-	} else {
-		LOG_DBG("GPS already stopped");
+ 	retval = nrf_setsockopt(drv_data->socket,
+				NRF_SOL_GNSS,
+				NRF_SO_GNSS_STOP,
+				NULL,
+				0);
+
+ 	if (retval != 0) {
+		LOG_ERR("Failed to stop GPS");
+		return -EIO;
 	}
 
-	return 0;
+ 	return 0;
 }
 
 static int trigger_set(struct device *dev,
