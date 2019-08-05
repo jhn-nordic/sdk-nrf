@@ -46,8 +46,8 @@ struct gps_datetime {
 struct gps_sv {
     u16_t sv;
     u16_t cn0;
-    int16_t  elevation;
-    int16_t  azimuth;
+    s16_t  elevation;
+    s16_t  azimuth;
     u8_t  flags;
     u8_t  signal;
 };
@@ -63,7 +63,7 @@ struct gps_pvt {
 	float hdop;
 	float vdop;
 	float tdop;
-	uint8_t flags;
+	u8_t flags;
 	struct gps_datetime datetime;
 	struct gps_sv sv[GPS_MAX_SATELLITES];
 };
