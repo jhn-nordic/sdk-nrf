@@ -20,12 +20,12 @@ extern "C" {
 #include <errno.h>
 #include <zephyr/types.h>
 
-#define GPS_NMEA_SENTENCE_MAX_LENGTH 	83
-#define GPS_MAX_SATELLITES		12
+#define GPS_NMEA_SENTENCE_MAX_LENGTH 83
+#define GPS_MAX_SATELLITES 12
 
 enum gps_channel {
-	GPS_CHAN_NMEA,	/** Channel to receive NMEA strings. */
-	GPS_CHAN_PVT	/** Channel to receive position, velocity and time. */
+	GPS_CHAN_NMEA, /** Channel to receive NMEA strings. */
+	GPS_CHAN_PVT /** Channel to receive position, velocity and time. */
 };
 
 struct gps_nmea {
@@ -44,12 +44,12 @@ struct gps_datetime {
 };
 
 struct gps_sv {
-    u16_t sv;
-    u16_t cn0;
-    s16_t  elevation;
-    s16_t  azimuth;
-    u8_t  flags;
-    u8_t  signal;
+	u16_t sv;
+	u16_t cn0;
+	s16_t elevation;
+	s16_t azimuth;
+	u8_t flags;
+	u8_t signal;
 };
 
 struct gps_pvt {
@@ -74,17 +74,12 @@ struct gps_data {
 		struct gps_nmea nmea;
 		struct gps_pvt pvt;
 	};
-
 };
 
 /**
  * @brief GPS trigger types.
  */
-enum gps_trigger_type {
-	GPS_TRIG_TIMER,
-	GPS_TRIG_DATA_READY,
-	GPS_TRIG_FIX
-};
+enum gps_trigger_type { GPS_TRIG_TIMER, GPS_TRIG_DATA_READY, GPS_TRIG_FIX };
 
 /**
  * @brief GPS trigger spec.
@@ -237,5 +232,4 @@ static inline int gps_stop(struct device *dev)
 #ifdef __cplusplus
 }
 #endif
-
 #endif /* ZEPHYR_INCLUDE_GPS_H_ */
