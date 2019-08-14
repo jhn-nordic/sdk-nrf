@@ -172,9 +172,14 @@
 	cts-pin = <25>;
 };
 
-/* UART2 must be enabled for defines to be available for SPM. */
+/*
+ * UART2 must be enabled for defines to be available for SPM for now.
+ * "Required" pins are set to the disconnect value 0xFFFFFFFF.
+ */
 &uart2 {
 	status = "okay";
+	tx-pin = <0xFFFFFFFF>;
+	rx-pin = <0xFFFFFFFF>;
 };
 
 &flash0 {
