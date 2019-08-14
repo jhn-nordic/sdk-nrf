@@ -13,6 +13,7 @@
 # Applications
 /applications/asset_tracker/              @joakimtoe @jtguggedal @rlubos
 /applications/nrf_desktop/                @pdunaj
+/applications/cat_tracker/                @simensrostad
 # Boards
 /boards/                                  @ioannisg @anangl
 # All cmake related files
@@ -71,3 +72,6 @@ subsys/debug/CMakeLists.txt               @nordic-krch
 
 # CI
 /.circleci/                               @coderbyheart
+commitlint.config.js                      @coderbyheart
+package.json                              @coderbyheart
+package-lock.json                         @coderbyheart
