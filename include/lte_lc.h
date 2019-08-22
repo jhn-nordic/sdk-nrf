@@ -12,6 +12,10 @@
 #ifndef ZEPHYR_INCLUDE_LTE_LINK_CONTROL_H_
 #define ZEPHYR_INCLUDE_LTE_LINK_CONTROL_H_
 
+#include <at_cmd.h>
+
+int lte_lc_init_connect_manager(at_cmd_handler_t connection_handler);
+
 /** @brief Function for initializing
  * the modem.  NOTE: a follow-up call to lte_lc_connect()
  * must be made.
