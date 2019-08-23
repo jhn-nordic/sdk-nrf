@@ -19,7 +19,14 @@
 #define GPS_FIX true
 #define INCLUDE_MOD_D true
 
+#define AT_CMD_SIZE(x) (sizeof(x) - 1)
+
+#define LTE_CONN_TIMEOUT 1
+
 static bool active;
+static bool lte_connected = false;
+
+static struct k_sem connect_sem;
 
 K_SEM_DEFINE(gps_timeout_sem, 0, 1);
 K_SEM_DEFINE(accel_trig_sem, 0, 1);
@@ -78,45 +85,70 @@ void k_sys_fatal_error_handler(unsigned int reason, const z_arch_esf_t *esf)
 	CODE_UNREACHABLE;
 }
 
-static void lte_connect(void)
-{
-	int err;
-
-	if (IS_ENABLED(CONFIG_LTE_AUTO_INIT_AND_CONNECT)) {
-		/* Do nothing, modem is already turned on
-		 * and connected.
-		 */
-	} else {
-		int err;
-
-		printk("LTE Link Connecting ...\n");
-		lte_connecting_led_start();
-		err = lte_lc_init_and_connect();
-		__ASSERT(err == 0, "LTE link could not be established.");
-		printk("LTE Link Connected!\n");
-		lte_connecting_led_stop();
-	}
-	lte_lc_psm_req(true);
-
-	k_sleep(5000);
-
-	err = modem_time_get();
-	if (err != 0) {
-		printk("Error fetching modem time\n");
-	}
-}
-
 static void cloud_publish(bool gps_fix, bool action, bool inc_modem_d)
 {
 	int err;
 
-	attach_battery_data(request_battery_status());
+	if (lte_connected) {
+		attach_battery_data(request_battery_status());
 
-	set_gps_found(gps_fix);
+		set_gps_found(gps_fix);
 
-	err = publish_data(action, inc_modem_d);
-	if (err != 0) {
-		printk("Error publishing data: %d", err);
+		err = publish_data(action, inc_modem_d);
+		if (err != 0) {
+			printk("Error publishing data: %d", err);
+		}
+	} else {
+		printk("Publish of data denied, LTE not connected\n");
+	}
+}
+
+static struct k_work cloud_get_work;
+
+static void cloud_get_work_fn(struct k_work *work)
+{
+	cloud_publish(NO_GPS_FIX, SYNCRONIZATION, INCLUDE_MOD_D);
+}
+
+static void work_init(void)
+{
+	k_work_init(&cloud_get_work, cloud_get_work_fn);
+}
+
+/*Fix*/
+static const char status1[] = "+CEREG: 1";
+static const char status2[] = "+CEREG:1";
+static const char status3[] = "+CEREG: 5";
+static const char status4[] = "+CEREG:5";
+
+void connection_handler(char *response)
+{
+	int err;
+
+	printk("recv: %s", response);
+
+	if (!memcmp(status1, response, AT_CMD_SIZE(status1)) ||
+	    !memcmp(status2, response, AT_CMD_SIZE(status2)) ||
+	    !memcmp(status3, response, AT_CMD_SIZE(status3)) ||
+	    !memcmp(status4, response, AT_CMD_SIZE(status4))) {
+		if (!lte_connected) {
+			printk("CONNECTED\n");
+
+			k_sleep(5000);
+
+			err = modem_time_get();
+			if (err != 0) {
+				printk("Error fetching modem time\n");
+			}
+
+			lte_connected = true;
+			k_sem_give(&connect_sem);
+		}
+
+	} else {
+		printk("Disconnected\n");
+
+		lte_connected = false;
 	}
 }
 
@@ -215,14 +247,35 @@ static void start_restart_mov_timer(void)
 		      K_SECONDS(check_mov_timeout()));
 }
 
+static void lte_connect()
+{
+	int err;
+
+	k_sem_init(&connect_sem, 0, 1);
+	err = lte_lc_init_connect_manager(connection_handler);
+	if (err != 0) {
+		printk("Error setting lte_connect manager: %d\n", err);
+	}
+
+	if (k_sem_take(&connect_sem, K_MINUTES(LTE_CONN_TIMEOUT)) == 0) {
+		lte_lc_psm_req(true);
+		cloud_publish(NO_GPS_FIX, SYNCRONIZATION, INCLUDE_MOD_D);
+	} else {
+		lte_lc_offline();
+		lte_lc_gps_mode();
+		lte_lc_normal();
+	}
+}
+
 void main(void)
 {
 	printk("The cat tracker has started\n");
+	work_init();
+	adxl362_init();
+	// led_init(); led thread should be fixed to use thread start
 	cloud_configuration_init();
 	lte_connect();
-	adxl362_init();
 	gps_control_init(gps_control_handler);
-	cloud_publish(NO_GPS_FIX, SYNCRONIZATION, INCLUDE_MOD_D);
 
 check_mode:
 	start_restart_mov_timer();
@@ -260,6 +313,10 @@ gps_search:
 	events[1].state = K_POLL_STATE_NOT_READY;
 	events[0].state = K_POLL_STATE_NOT_READY;
 	k_sleep(K_SECONDS(check_active_wait(active)));
+
+	if (!lte_connected) {
+		lte_connect();
+	}
 
 	goto check_mode;
 }
