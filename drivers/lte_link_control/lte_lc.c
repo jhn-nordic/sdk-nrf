@@ -52,6 +52,9 @@ static const char network_mode[] = "AT%XSYSTEMMODE=0,1,1,0";
 /* Set network mode to LTE-M */
 static const char network_mode[] = "AT%XSYSTEMMODE=1,0,1,0";
 #endif
+/*Set netowrk mode to GPS */
+static const char gps_mode[] = "AT%XSYSTEMMODE=0,0,1,0";
+
 /* Accepted network statuses read from modem */
 static const char status1[] = "+CEREG: 1";
 static const char status2[] = "+CEREG:1";
@@ -144,6 +147,10 @@ int lte_lc_init_connect_manager(at_cmd_handler_t connection_handler)
 		return ret;
 	}
 
+	if (at_cmd_write(offline, NULL, 0, NULL) != 0) {
+		return -EIO;
+	}
+
 	if (at_cmd_write(network_mode, NULL, 0, NULL) != 0) {
 		return -EIO;
 	}
@@ -189,6 +196,15 @@ int lte_lc_init_and_connect(void)
 	int err = w_lte_lc_init_and_connect(x);
 
 	return err;
+}
+
+int lte_lc_gps_mode(void)
+{
+	if (at_cmd_write(gps_mode, NULL, 0, NULL) != 0) {
+		return -EIO;
+	}
+
+	return 0;
 }
 
 int lte_lc_offline(void)
