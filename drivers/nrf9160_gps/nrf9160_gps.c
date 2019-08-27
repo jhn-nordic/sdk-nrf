@@ -111,8 +111,8 @@ static void print_satellite_stats(nrf_gnss_data_frame_t *pvt_data)
 	LOG_DBG("Tracking: %d Using: %d Unhealthy: %d", tracked, in_fix,
 		unhealthy);
 
-	LOG_DBG("Seconds since last fix %lld",
-		(k_uptime_get() - fix_timestamp) / 1000);
+	LOG_DBG("Seconds since last fix %d",
+		(s32_t)((k_uptime_get() - fix_timestamp) / 1000));
 }
 
 static void gps_thread(int dev_ptr)
@@ -322,7 +322,6 @@ static int start(struct device *dev)
 	u16_t fix_retry = 0;
 	u16_t fix_interval = 1;
 	u16_t nmea_mask = 0;
-	int gps_op_count = 0;
 
 #ifdef CONFIG_NRF9160_GPS_NMEA_GSV
 	nmea_mask |= NRF_CONFIG_NMEA_GSV_MASK;
@@ -388,7 +387,7 @@ static int start(struct device *dev)
 				NRF_SO_GNSS_START, NULL, 0);
 
 	if (retval != 0) {
-		LOG_ERR("Failed to %s GPS", __func__);
+		LOG_ERR("Failed to start GPS");
 		return -EIO;
 	}
 
@@ -396,8 +395,6 @@ static int start(struct device *dev)
 	k_sem_give(&drv_data->thread_run_sem);
 
 	LOG_DBG("GPS operational");
-	gps_op_count++;
-	LOG_DBG("Counter: %d", gps_op_count);
 
 	return retval;
 }
@@ -407,8 +404,8 @@ static int init(struct device *dev)
 	struct gps_drv_data *drv_data = dev->driver_data;
 
 	drv_data->socket = -1;
-
 	atomic_set(&drv_data->gps_is_active, 0);
+
 	k_sem_init(&drv_data->thread_run_sem, 0, 1);
 	k_mutex_init(&drv_data->trigger_mutex);
 
@@ -468,7 +465,7 @@ static int stop(struct device *dev)
 				NRF_SO_GNSS_STOP, NULL, 0);
 
 	if (retval != 0) {
-		LOG_ERR("Failed to %s GPS", __func__);
+		LOG_ERR("Failed to stop GPS");
 		return -EIO;
 	}
 
