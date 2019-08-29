@@ -301,6 +301,7 @@ static void spm_config_peripherals(void)
 		PERIPH("NRF_PWM1", NRF_PWM1, CONFIG_SPM_NRF_PWM1_NS),
 		PERIPH("NRF_PWM2", NRF_PWM2, CONFIG_SPM_NRF_PWM2_NS),
 		PERIPH("NRF_PWM3", NRF_PWM3, CONFIG_SPM_NRF_PWM3_NS),
+		PERIPH("NRF_WDT", NRF_WDT, 1),
 		/* There is no DTS node for the peripherals below,
 		 * so address them using nrfx macros directly.
 		 */

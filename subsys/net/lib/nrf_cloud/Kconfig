@@ -32,7 +32,7 @@ config NRF_CLOUD_CERTIFICATES_FILE
 
 config NRF_CLOUD_SEC_TAG
 	int "Security tag to use for nRF Cloud connection"
-	default 16842753
+	default 42
 
 config NRF_CLOUD_HOST_NAME
 	string "nRF Cloud server hostname"

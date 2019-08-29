@@ -27,6 +27,10 @@ static const char subscribe[] = "AT+CEREG=2";
 static const char lock_bands[] =
 	"AT%XBANDLOCK=2,\"" CONFIG_LTE_LOCK_BAND_MASK "\"";
 #endif
+
+
+static const char magpio[] ="AT\%XMAGPIO=1,0,0,1,1,1574,1577";
+
 /* Request eDRX settings to be used */
 static const char edrx_req[] = "AT+CEDRXS=1," CONFIG_LTE_EDRX_REQ_ACTT_TYPE
 			       ",\"" CONFIG_LTE_EDRX_REQ_VALUE "\"";
@@ -83,6 +87,9 @@ void at_handler(char *response)
 
 static int w_lte_lc_init(void)
 {
+	if (at_cmd_write(magpio, NULL, 0, NULL) != 0) {
+		return -EIO;
+	}
 #if defined(CONFIG_LTE_EDRX_REQ)
 	/* Request configured eDRX settings to save power */
 	if (at_cmd_write(edrx_req, NULL, 0, NULL) != 0) {

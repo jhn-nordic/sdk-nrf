@@ -21,7 +21,7 @@
 #include <net/cloud.h>
 #include <net/socket.h>
 #include <nrf_cloud.h>
-
+#include <gpio.h>
 #include "cloud_codec.h"
 #include "orientation_detector.h"
 #include "ui.h"
@@ -864,6 +864,16 @@ static void work_init(void)
 static void modem_configure(void)
 {
 #if defined(CONFIG_BSD_LIBRARY)
+
+	struct device *port;
+	port=device_get_binding(DT_GPIO_P0_DEV_NAME);
+	
+	 gpio_pin_configure(port, 8, GPIO_DIR_OUT);
+
+
+	 gpio_pin_write(port, 8, 0);
+
+	
 	if (IS_ENABLED(CONFIG_LTE_AUTO_INIT_AND_CONNECT)) {
 		/* Do nothing, modem is already turned on
 		 * and connected.

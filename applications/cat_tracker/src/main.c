@@ -12,6 +12,8 @@
 #include <gps_controller.h>
 #include <mqtt_codec.h>
 #include <leds.h>
+#include <gpio.h>
+#include <drivers/watchdog.h>
 
 #define NORMAL_OPERATION false
 #define SYNCRONIZATION true
@@ -85,6 +87,43 @@ void k_sys_fatal_error_handler(unsigned int reason, const z_arch_esf_t *esf)
 	CODE_UNREACHABLE;
 }
 
+struct wdt_data_storage {
+	struct device *wdt_drv;
+	int wdt_channel_id;
+};
+static struct wdt_data_storage wdt_data;
+static int watchdog_enable(struct wdt_data_storage *data)
+{
+	__ASSERT_NO_MSG(data != NULL);
+
+	int err = -ENXIO;
+
+	data->wdt_drv = device_get_binding(DT_WDT_0_NAME);
+	if (data->wdt_drv == NULL) {
+		return err;
+	}
+
+	static const struct wdt_timeout_cfg wdt_settings = {
+			.window = {
+				.min = 0,
+				.max = 10000
+			},
+			.callback = NULL,
+			.flags = WDT_FLAG_RESET_SOC
+	};
+
+
+	data->wdt_channel_id = wdt_install_timeout(
+			data->wdt_drv, &wdt_settings);
+	if (data->wdt_channel_id < 0) {
+		return -EFAULT;
+	}
+
+	err = wdt_setup(data->wdt_drv, WDT_OPT_PAUSE_HALTED_BY_DBG);
+
+	
+	return err;
+}
 static void cloud_publish(bool gps_fix, bool action, bool inc_modem_d)
 {
 	int err;
@@ -188,6 +227,40 @@ static void adxl362_trigger_handler(struct device *dev,
 		printk("Unknown trigger\n");
 	}
 }
+static void lis2dh_trigger_handler(struct device *dev,
+				    struct sensor_trigger *trig)
+{
+	static struct sensor_value accel[3];
+
+	switch (trig->type) {
+	case SENSOR_TRIG_DATA_READY:
+
+		if (sensor_sample_fetch(dev) < 0) {
+			printk("Sample fetch error\n");
+			return;
+		}
+
+		sensor_channel_get(dev, SENSOR_CHAN_ACCEL_X, &accel[0]);
+		sensor_channel_get(dev, SENSOR_CHAN_ACCEL_Y, &accel[1]);
+		sensor_channel_get(dev, SENSOR_CHAN_ACCEL_Z, &accel[2]);
+		wdt_feed(wdt_data.wdt_drv, wdt_data.wdt_channel_id);
+		if ((abs(sensor_value_to_double(&accel[0])) >
+		     check_accel_thres()) ||
+		    (abs(sensor_value_to_double(&accel[1])) >
+		     check_accel_thres()) ||
+		    (abs(sensor_value_to_double(&accel[2])) >
+		     check_accel_thres())) {
+			attach_accel_data(sensor_value_to_double(&accel[0]),
+					  sensor_value_to_double(&accel[1]),
+					  sensor_value_to_double(&accel[2]));
+			k_sem_give(events[1].sem);
+		}
+
+		break;
+	default:
+		printk("Unknown trigger\n");
+	}
+}
 
 static void gps_control_handler(struct device *dev, struct gps_trigger *trigger)
 {
@@ -207,7 +280,7 @@ static void gps_control_handler(struct device *dev, struct gps_trigger *trigger)
 		break;
 	}
 }
-
+/* 
 static void adxl362_init(void)
 {
 	struct device *dev = device_get_binding(DT_INST_0_ADI_ADXL362_LABEL);
@@ -222,6 +295,27 @@ static void adxl362_init(void)
 
 		trig.type = SENSOR_TRIG_THRESHOLD;
 		if (sensor_trigger_set(dev, &trig, adxl362_trigger_handler)) {
+			printk("Trigger set error\n");
+			return;
+		}
+	}
+}*/
+
+
+static void lis2dh_init(void)
+{
+	struct device *dev = device_get_binding("LIS2DH12-ACCEL");
+
+	if (dev == NULL) {
+		printk("Device get binding device\n");
+		return;
+	}
+
+	if (IS_ENABLED(CONFIG_LIS2DH_TRIGGER)) {
+		struct sensor_trigger trig = { .chan = SENSOR_CHAN_ACCEL_XYZ };
+
+		trig.type = SENSOR_TRIG_DATA_READY;
+		if (sensor_trigger_set(dev, &trig, lis2dh_trigger_handler)) {
 			printk("Trigger set error\n");
 			return;
 		}
@@ -276,8 +370,18 @@ static void lte_connect()
 void main(void)
 {
 	printk("The cat tracker has started\n");
+        struct device *port;
+	port=device_get_binding(DT_GPIO_P0_DEV_NAME);
+	
+	gpio_pin_configure(port, 8, GPIO_DIR_OUT);
+
+
+	 gpio_pin_write(port, 8, 0);
+	
 	work_init();
-	adxl362_init();
+	//adxl362_init();
+	watchdog_enable(&wdt_data);
+	lis2dh_init();
 	cloud_configuration_init();
 	lte_connect();
 	gps_control_init(gps_control_handler);

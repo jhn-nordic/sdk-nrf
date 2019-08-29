@@ -1,0 +1,18 @@
+/* Needed to get NRF_UARTE2 and NRF_PWMn defined. */
+&uart2 {
+	status = "okay";
+	tx-pin = <24>;
+	rx-pin = <23>;
+};
+
+&pwm1 {
+	status = "okay";
+};
+
+&pwm2 {
+	status = "okay";
+};
+
+&pwm3 {
+	status = "okay";
+};

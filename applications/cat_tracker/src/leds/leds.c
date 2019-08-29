@@ -65,7 +65,7 @@ void led_FSM(void)
 		if (err) {
 		}
 
-		err = gpio_pin_write(led_devs[i], led_pins[i].number, false);
+		err = gpio_pin_write(led_devs[i], led_pins[i].number, true);
 		if (err != 0) {
 			printk("Unsuccessful setting initial state LEDs: %d\n",
 			       err);
@@ -99,19 +99,19 @@ void led_FSM(void)
 		case GPS_SEARCH_STOP:
 
 			gpio_pin_write(led_devs[LED1], led_pins[LED1].number,
-				       false);
+				       true);
 
 			k_poll(events, 1, K_FOREVER);
 			break;
 
 		case GPS_SEARCH_STOP_FIX:
 			gpio_pin_write(led_devs[LED1], led_pins[LED1].number,
-				       false);
-			gpio_pin_write(led_devs[LED3], led_pins[LED3].number,
 				       true);
+			gpio_pin_write(led_devs[LED3], led_pins[LED3].number,
+				       false);
 			k_sleep(2000);
 			gpio_pin_write(led_devs[LED3], led_pins[LED3].number,
-				       false);
+				       true);
 			k_poll(events, 1, K_FOREVER);
 			break;
 
@@ -133,24 +133,24 @@ void led_FSM(void)
 		case LTE_CONNECTED:
 
 			gpio_pin_write(led_devs[LED2], led_pins[LED2].number,
-				       true);
+				       false);
 			gpio_pin_write(led_devs[LED3], led_pins[LED3].number,
-				       true);
+				       false);
 			gpio_pin_write(led_devs[LED1], led_pins[LED1].number,
-				       true);
+				       false);
 			k_sleep(PROLONGED_DELAY);
 			gpio_pin_write(led_devs[LED2], led_pins[LED2].number,
-				       false);
+				       true);
 			gpio_pin_write(led_devs[LED3], led_pins[LED3].number,
-				       false);
+				       true);
 			gpio_pin_write(led_devs[LED1], led_pins[LED1].number,
-				       false);
+				       true);
 			k_poll(events, 1, K_FOREVER);
 			break;
 
 		case LTE_NOT_CONNECTED:
 			gpio_pin_write(led_devs[LED2], led_pins[LED2].number,
-				       false);
+				       true);
 
 			k_poll(events, 1, K_FOREVER);
 			break;
@@ -159,7 +159,7 @@ void led_FSM(void)
 
 			while (1) {
 				gpio_pin_write(led_devs[LED3],
-					       led_pins[LED3].number, true);
+					       led_pins[LED3].number, false);
 
 				k_sleep(250);
 
@@ -187,7 +187,7 @@ void led_FSM(void)
 		case PUBLISH_DATA_STOP:
 
 			gpio_pin_write(led_devs[LED3], led_pins[LED3].number,
-				       false);
+				       true);
 
 			k_poll(events, 1, K_FOREVER);
 

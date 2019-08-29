@@ -26,7 +26,7 @@ LOG_MODULE_REGISTER(LOG_DOMAIN);
 #define OK_STR    "OK\r\n"
 #define ERROR_STR "ERROR\r\n"
 
-#define AT_MAX_CMD_LEN		CONFIG_AT_CMD_RESPONSE_MAX_LEN
+#define AT_MAX_CMD_LEN		4096
 
 /** @brief Termination Modes. */
 enum term_modes {
