@@ -36,12 +36,12 @@
 #define DEVICE_NAME_LEN	        (sizeof(DEVICE_NAME) - 1)
 
 /* Change this if you have an LED connected to a custom port */
-#define LED_PORT                DT_ALIAS_LED0_GPIOS_CONTROLLER
+//#define LED_PORT                DT_ALIAS_LED0_GPIOS_CONTROLLER
 
-#define RUN_STATUS_LED          DT_ALIAS_LED0_GPIOS_PIN
+//#define RUN_STATUS_LED          DT_ALIAS_LED0_GPIOS_PIN
 #define RUN_LED_BLINK_INTERVAL  1000
 
-#define CON_STATUS_LED          DT_ALIAS_LED0_GPIOS_PIN
+//#define CON_STATUS_LED          DT_ALIAS_LED0_GPIOS_PIN
 
 #define LED_ON                  0
 #define LED_OFF                 1
@@ -59,10 +59,10 @@ static struct bt_conn *auth_conn;
 static struct device  *led_port;
 static struct device  *uart;
 
-static u32_t led_pins[] = {DT_ALIAS_LED0_GPIOS_PIN,
-			   DT_ALIAS_LED1_GPIOS_PIN,
-			   DT_ALIAS_LED2_GPIOS_PIN,
-			   DT_ALIAS_LED3_GPIOS_PIN};
+// static u32_t led_pins[] = {DT_ALIAS_LED0_GPIOS_PIN,
+// 			   DT_ALIAS_LED1_GPIOS_PIN,
+// 			   DT_ALIAS_LED2_GPIOS_PIN,
+// 			   DT_ALIAS_LED3_GPIOS_PIN};
 
 struct uart_data_t {
 	void  *fifo_reserved;
@@ -84,9 +84,9 @@ static const struct bt_data sd[] = {
 
 static void set_led_state(int led, bool state)
 {
-	if (led_port) {
-		gpio_pin_write(led_port, led, state);
-	}
+	// if (led_port) {
+	// 	gpio_pin_write(led_port, led, state);
+	// }
 }
 
 static void uart_cb(struct device *uart)
@@ -188,7 +188,7 @@ static void connected(struct bt_conn *conn, u8_t err)
 	printk("Connected\n");
 	current_conn = bt_conn_ref(conn);
 
-	set_led_state(CON_STATUS_LED, LED_ON);
+	//set_led_state(CON_STATUS_LED, LED_ON);
 }
 
 static void disconnected(struct bt_conn *conn, u8_t reason)
@@ -203,7 +203,7 @@ static void disconnected(struct bt_conn *conn, u8_t reason)
 	if (current_conn) {
 		bt_conn_unref(current_conn);
 		current_conn = NULL;
-		set_led_state(CON_STATUS_LED, LED_OFF);
+		//set_led_state(CON_STATUS_LED, LED_OFF);
 	}
 }
 
@@ -318,40 +318,40 @@ static void bt_receive_cb(struct bt_conn *conn, const u8_t *const data,
 
 	printk("Received data from: %s\n", addr);
 
-	for (u16_t pos = 0; pos != len;) {
-		struct uart_data_t *tx = k_malloc(sizeof(*tx));
+	// for (u16_t pos = 0; pos != len;) {
+	// 	struct uart_data_t *tx = k_malloc(sizeof(*tx));
 
-		if (!tx) {
-			printk("Not able to allocate UART send data buffer\n");
-			return;
-		}
+	// 	if (!tx) {
+	// 		printk("Not able to allocate UART send data buffer\n");
+	// 		return;
+	// 	}
 
-		/* Keep the last byte of TX buffer for potential LF char. */
-		size_t tx_data_size = sizeof(tx->data) - 1;
+	// 	/* Keep the last byte of TX buffer for potential LF char. */
+	// 	size_t tx_data_size = sizeof(tx->data) - 1;
 
-		if ((len - pos) > tx_data_size) {
-			tx->len = tx_data_size;
-		} else {
-			tx->len = (len - pos);
-		}
+	// 	if ((len - pos) > tx_data_size) {
+	// 		tx->len = tx_data_size;
+	// 	} else {
+	// 		tx->len = (len - pos);
+	// 	}
 
-		memcpy(tx->data, &data[pos], tx->len);
+	// 	memcpy(tx->data, &data[pos], tx->len);
 
-		pos += tx->len;
+	// 	pos += tx->len;
 
-		/* Append the LF character when the CR character triggered
-		 * transmission from the peer.
-		 */
-		if ((pos == len) && (data[len - 1] == '\r')) {
-			tx->data[tx->len] = '\n';
-			tx->len++;
-		}
+	// 	/* Append the LF character when the CR character triggered
+	// 	 * transmission from the peer.
+	// 	 */
+	// 	if ((pos == len) && (data[len - 1] == '\r')) {
+	// 		tx->data[tx->len] = '\n';
+	// 		tx->len++;
+	// 	}
 
-		k_fifo_put(&fifo_uart_tx_data, tx);
-	}
+	// 	k_fifo_put(&fifo_uart_tx_data, tx);
+	// }
 
-	/* Start the UART transfer by enabling the TX ready interrupt */
-	uart_irq_tx_enable(uart);
+	// /* Start the UART transfer by enabling the TX ready interrupt */
+	// uart_irq_tx_enable(uart);
 }
 
 static struct bt_gatt_nus_cb nus_cb = {
@@ -392,60 +392,60 @@ static int init_leds(void)
 {
 	int err = 0;
 
-	led_port = device_get_binding(LED_PORT);
+	// led_port = device_get_binding(LED_PORT);
 
-	if (!led_port) {
-		printk("Could not bind to LED port\n");
-		return -ENXIO;
-	}
+	// if (!led_port) {
+	// 	printk("Could not bind to LED port\n");
+	// 	return -ENXIO;
+	// }
 
-	err = gpio_pin_configure(led_port, RUN_STATUS_LED,
-			   GPIO_DIR_OUT);
-	if (!err) {
-		err = gpio_pin_configure(led_port, CON_STATUS_LED,
-			   GPIO_DIR_OUT);
-	}
+	// err = gpio_pin_configure(led_port, RUN_STATUS_LED,
+	// 		   GPIO_DIR_OUT);
+	// if (!err) {
+	// 	err = gpio_pin_configure(led_port, CON_STATUS_LED,
+	// 		   GPIO_DIR_OUT);
+	// }
 
-	if (!err) {
-		err = gpio_pin_write(led_port, RUN_STATUS_LED, LED_OFF);
-	}
+	// if (!err) {
+	// 	err = gpio_pin_write(led_port, RUN_STATUS_LED, LED_OFF);
+	// }
 
-	if (!err) {
-		err = gpio_pin_write(led_port, CON_STATUS_LED, LED_OFF);
-	}
+	// if (!err) {
+	// 	err = gpio_pin_write(led_port, CON_STATUS_LED, LED_OFF);
+	// }
 
-	if (err) {
-		printk("Not able to correctly initialize LED pins (err:%d)",
-			err);
-		led_port = NULL;
-	}
+	// if (err) {
+	// 	printk("Not able to correctly initialize LED pins (err:%d)",
+	// 		err);
+	// 	led_port = NULL;
+	// }
 
 	return err;
 }
 
 void error(void)
 {
-	int err = -1;
+	// int err = -1;
 
-	led_port = device_get_binding(LED_PORT);
-	if (led_port) {
-		for (size_t i = 0; i < ARRAY_SIZE(led_pins); i++) {
-			err = gpio_pin_configure(led_port, led_pins[i],
-						 GPIO_DIR_OUT);
-			if (err) {
-				break;
-			}
-		}
-	}
+	// led_port = device_get_binding(LED_PORT);
+	// if (led_port) {
+	// 	for (size_t i = 0; i < ARRAY_SIZE(led_pins); i++) {
+	// 		err = gpio_pin_configure(led_port, led_pins[i],
+	// 					 GPIO_DIR_OUT);
+	// 		if (err) {
+	// 			break;
+	// 		}
+	// 	}
+	// }
 
-	if (!err) {
-		for (size_t i = 0; i < ARRAY_SIZE(led_pins); i++) {
-			err = gpio_pin_write(led_port, led_pins[i], LED_ON);
-			if (err) {
-				break;
-			}
-		}
-	}
+	// if (!err) {
+	// 	for (size_t i = 0; i < ARRAY_SIZE(led_pins); i++) {
+	// 		err = gpio_pin_write(led_port, led_pins[i], LED_ON);
+	// 		if (err) {
+	// 			break;
+	// 		}
+	// 	}
+	// }
 
 	while (true) {
 		/* Spin for ever */
@@ -484,11 +484,11 @@ void button_changed(u32_t button_state, u32_t has_changed)
 
 void configure_buttons(void)
 {
-	int err = dk_buttons_init(button_changed);
+	// int err = dk_buttons_init(button_changed);
 
-	if (err) {
-		printk("Cannot init buttons (err: %d)\n", err);
-	}
+	// if (err) {
+	// 	printk("Cannot init buttons (err: %d)\n", err);
+	// }
 }
 
 static void led_blink_thread(void)
@@ -529,7 +529,7 @@ static void led_blink_thread(void)
 	init_leds();
 
 	for (;;) {
-		set_led_state(RUN_STATUS_LED, (++blink_status) % 2);
+		//set_led_state(RUN_STATUS_LED, (++blink_status) % 2);
 		k_sleep(RUN_LED_BLINK_INTERVAL);
 	}
 }
