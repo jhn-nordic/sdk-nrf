@@ -1,0 +1,19 @@
+identifier: nrf51_desktop
+name: nRF51-DESKTOP
+type: mcu
+arch: arm
+toolchain:
+  - zephyr
+  - gnuarmemb
+  - xtools
+ram: 32
+supported:
+  - adc
+  - ble
+  - nvs
+  - pwm
+  - watchdog
+  - counter
+testing:
+  ignore_tags:
+    - net

@@ -13,6 +13,7 @@ set(NRF_SUPPORTED_BOARDS
   nrf52840_pca10059
   nrf52_pca20037
   nrf52_pca20044
+  nrf51_desktop
   )
 
 set(NRF_SUPPORTED_BUILD_TYPES

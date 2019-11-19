@@ -1,0 +1,102 @@
+/*
+ * Copyright (c) 2017 Linaro Limited
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/dts-v1/;
+#include <nordic/nrf51822_qfac.dtsi>
+
+/ {
+	model = "Nordic nRFready Desktop 2 mouse";
+	compatible = "nordic,nrf51822-qfac",
+		     "nordic,nrf51822";
+
+	chosen {
+		zephyr,console = &uart0;
+		zephyr,sram = &sram0;
+		zephyr,flash = &flash0;
+		zephyr,code-partition = &slot0_partition;
+	};
+};
+
+&gpiote {
+	status = "okay";
+};
+
+&gpio0 {
+	status = "okay";
+};
+
+&adc {
+	status = "okay";
+};
+
+&uart0 {
+	current-speed = <115200>;
+	status = "okay";
+	tx-pin = <9>;
+	rx-pin = <10>;
+	rts-pin = <0xFFFFFFFF>;
+	cts-pin = <0xFFFFFFFF>;
+};
+
+
+&spi0 {
+	compatible = "nordic,nrf-spi";
+	status = "okay";
+	sck-pin = <29>;
+	mosi-pin = <12>;
+	miso-pin = <22>;
+	cs-gpios = <&gpio0 23 0>;
+	paw3212@0 {
+		compatible = "pixart,paw3212";
+		reg = <0>;
+		irq-gpios = <&gpio0 8 0>;
+		spi-max-frequency = <1000000>;
+		label = "PAW3212";
+	};
+};
+
+&qdec {
+	status = "okay";
+	a-pin = <15>;
+	b-pin = <14>;
+	enable-pin = <13>;
+	led-pin = <0xFFFFFFFF>;
+	led-pre = <0>;
+	steps = <24>;
+};
+
+&flash0 {
+	/*
+	 * For more information, see:
+	 * http://docs.zephyrproject.org/latest/guides/dts/index.html#flash-partitions
+	 */
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		boot_partition: partition@0 {
+			label = "mcuboot";
+			reg = <0x00000000 0x8000>;
+		};
+		slot0_partition: partition@8000 {
+			label = "image-0";
+			reg = <0x00008000 0x1a000>;
+		};
+		slot1_partition: partition@22000 {
+			label = "image-1";
+			reg = <0x00022000 0x1a000>;
+		};
+		scratch_partition: partition@3c000 {
+			label = "image-scratch";
+			reg = <0x0003c000 0x2000>;
+		};
+		storage_partition: partition@3e000 {
+			label = "storage";
+			reg = <0x0003e000 0x00002000>;
+		};
+	};
+};

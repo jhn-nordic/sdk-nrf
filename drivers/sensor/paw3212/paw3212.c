@@ -40,48 +40,6 @@ LOG_MODULE_REGISTER(paw3212, CONFIG_PAW3212_LOG_LEVEL);
 #define PAW3212_REG_MOTION		0x02
 #define PAW3212_REG_DELTA_X_LOW		0x03
 #define PAW3212_REG_DELTA_Y_LOW		0x04
-#define PAW3212_REG_CONFIGURATION	0x06
-#define PAW3212_REG_WRITE_PROTECT	0x09
-#define PAW3212_REG_DELTA_XY_HIGH	0x12
-#define PAW3212_REG_MOUSE_OPTION	0x19
-#define PAW3212_REG_SLEEP1		0x0A
-#define PAW3212_REG_SLEEP2		0x0B
-#define PAW3212_REG_SLEEP3		0x0C
-#define PAW3212_REG_CPI_X		0x0D
-#define PAW3212_REG_CPI_Y		0x0E
-
-/* CPI */
-#define PAW3212_CPI_STEP		38u
-#define PAW3212_CPI_MIN			(0x00 * PAW3212_CPI_STEP)
-#define PAW3212_CPI_MAX			(0x3F * PAW3212_CPI_STEP)
-
-/* Sleep */
-#define PAW3212_ETM_POS			0u
-#define PAW3212_ETM_SIZE		4u
-#define PAW3212_FREQ_POS		(PAW3212_ETM_POS + PAW3212_ETM_SIZE)
-#define PAW3212_FREQ_SIZE		4u
-
-#define PAW3212_ETM_MIN			0u
-#define PAW3212_ETM_MAX			BIT_MASK(PAW3212_ETM_SIZE)
-#define PAW3212_ETM_MASK		(PAW3212_ETM_MAX << PAW3212_ETM_POS)
-
-#define PAW3212_FREQ_MIN		0u
-#define PAW3212_FREQ_MAX		BIT_MASK(PAW3212_FREQ_SIZE)
-#define PAW3212_FREQ_MASK		(PAW3212_FREQ_MAX << PAW3212_FREQ_POS)
-
-/* Motion status bits */
-#define PAW3212_MOTION_STATUS_MOTION	BIT(7)
-#define PAW3212_MOTION_STATUS_DYOVF	BIT(4)
-#define PAW3212_MOTION_STATUS_DXOVF	BIT(3)
-
-/* Configuration bits */
-#define PAW3212_CONFIG_CHIP_RESET	BIT(7)
-
-/* Mouse option bits */
-#define PAW3212_MOUSE_OPT_XY_SWAP	BIT(5)
-#define PAW3212_MOUSE_OPT_Y_INV		BIT(4)
-#define PAW3212_MOUSE_OPT_X_INV		BIT(3)
-#define PAW3212_MOUSE_OPT_12BITMODE	BIT(2)
 
 /* Convert deltas to x and y */
 #define PAW3212_DELTA_X(xy_high, x_low)	expand_s12((((xy_high) & 0xF0) << 4) | (x_low))
@@ -284,110 +242,48 @@ static int reg_write(struct paw3212_data *dev_data, u8_t reg, u8_t val)
 
 static int update_cpi(struct paw3212_data *dev_data, u32_t cpi)
 {
-	int err;
+	// int err;
 
-	if ((cpi > PAW3212_CPI_MAX) || (cpi < PAW3212_CPI_MIN)) {
-		LOG_ERR("CPI %" PRIu32 " out of range", cpi);
-		return -EINVAL;
-	}
+	// if ((cpi > PAW3212_CPI_MAX) || (cpi < PAW3212_CPI_MIN)) {
+	// 	LOG_ERR("CPI %" PRIu32 " out of range", cpi);
+	// 	return -EINVAL;
+	// }
 
-	u8_t regval = cpi / PAW3212_CPI_STEP;
+	// u8_t regval = cpi / PAW3212_CPI_STEP;
 
-	LOG_INF("Set CPI: %u (requested: %u, reg:0x%" PRIx8 ")",
-		regval * PAW3212_CPI_STEP, cpi, regval);
+	// LOG_INF("Set CPI: %u (requested: %u, reg:0x%" PRIx8 ")",
+	// 	regval * PAW3212_CPI_STEP, cpi, regval);
 
-	err = reg_write(dev_data, PAW3212_REG_WRITE_PROTECT, PAW3212_WPMAGIC);
-	if (err) {
-		LOG_ERR("Cannot disable write protect");
-		return err;
-	}
+	// err = reg_write(dev_data, PAW3212_REG_WRITE_PROTECT, PAW3212_WPMAGIC);
+	// if (err) {
+	// 	LOG_ERR("Cannot disable write protect");
+	// 	return err;
+	// }
 
-	err = reg_write(dev_data, PAW3212_REG_CPI_X, regval);
-	if (err) {
-		LOG_ERR("Failed to change x CPI");
-		return err;
-	}
+	// err = reg_write(dev_data, PAW3212_REG_CPI_X, regval);
+	// if (err) {
+	// 	LOG_ERR("Failed to change x CPI");
+	// 	return err;
+	// }
 
-	err = reg_write(dev_data, PAW3212_REG_CPI_Y, regval);
-	if (err) {
-		LOG_ERR("Failed to change y CPI");
-		return err;
-	}
+	// err = reg_write(dev_data, PAW3212_REG_CPI_Y, regval);
+	// if (err) {
+	// 	LOG_ERR("Failed to change y CPI");
+	// 	return err;
+	// }
 
-	err = reg_write(dev_data, PAW3212_REG_WRITE_PROTECT, 0);
-	if (err) {
-		LOG_ERR("Cannot enable write protect");
-	}
+	// err = reg_write(dev_data, PAW3212_REG_WRITE_PROTECT, 0);
+	// if (err) {
+	// 	LOG_ERR("Cannot enable write protect");
+	// }
 
-	return err;
+	return 0;
 }
 
 static int update_sleep_timeout(struct paw3212_data *dev_data, u8_t reg_addr,
 				u32_t timeout_ms)
 {
-	u32_t timeout_step_ms;
-
-	switch (reg_addr) {
-	case PAW3212_REG_SLEEP1:
-		timeout_step_ms = 32;
-		break;
-
-	case PAW3212_REG_SLEEP2:
-	case PAW3212_REG_SLEEP3:
-		timeout_step_ms = 20480;
-		break;
-
-	default:
-		LOG_ERR("Not supported");
-		return -ENOTSUP;
-	}
-
-	u32_t etm = timeout_ms / timeout_step_ms - 1;
-
-	if ((etm < PAW3212_ETM_MIN) || (etm > PAW3212_ETM_MAX)) {
-		LOG_WRN("Sleep timeout %" PRIu32 " out of range", timeout_ms);
-		return -EINVAL;
-	}
-
-	LOG_INF("Set sleep%d timeout: %u (requested: %u, reg:0x%" PRIx8 ")",
-		reg_addr - PAW3212_REG_SLEEP1 + 1,
-		(etm + 1) * timeout_step_ms,
-		timeout_ms,
-		etm);
-
-	int err;
-
-	err = reg_write(dev_data, PAW3212_REG_WRITE_PROTECT, PAW3212_WPMAGIC);
-	if (err) {
-		LOG_ERR("Cannot disable write protect");
-		return err;
-	}
-
-	u8_t regval;
-
-	err = reg_read(dev_data, reg_addr, &regval);
-	if (err) {
-		LOG_ERR("Failed to read sleep register");
-		return err;
-	}
-
-	__ASSERT_NO_MSG((etm & PAW3212_ETM_MASK) == etm);
-
-	regval &= ~PAW3212_ETM_MASK;
-	regval |= (etm << PAW3212_ETM_POS);
-
-	err = reg_write(dev_data, reg_addr, regval);
-	if (err) {
-		LOG_ERR("Failed to change sleep time");
-		return err;
-	}
-
-	err = reg_write(dev_data, PAW3212_REG_WRITE_PROTECT, 0);
-	if (err) {
-		LOG_ERR("Cannot enable write protect");
-	}
-
-	return err;
+	return 0;
 }
 
 static void irq_handler(struct device *gpiob, struct gpio_callback *cb,
@@ -440,8 +336,8 @@ static void trigger_handler(struct k_work *work)
 
 static int paw3212_async_init_power_up(struct paw3212_data *dev_data)
 {
-	return reg_write(dev_data, PAW3212_REG_CONFIGURATION,
-			 PAW3212_CONFIG_CHIP_RESET);
+	return reg_write(dev_data, 0X3A,
+			 0XFA);
 }
 
 static int paw3212_async_init_verify_id(struct paw3212_data *dev_data)
@@ -449,14 +345,14 @@ static int paw3212_async_init_verify_id(struct paw3212_data *dev_data)
 	int err;
 
 	u8_t product_id;
-	err = reg_read(dev_data, PAW3212_REG_PRODUCT_ID, &product_id);
+	err = reg_read(dev_data, 0x00, &product_id);
 	if (err) {
 		LOG_ERR("Cannot obtain product ID");
 		return err;
 	}
 
 	LOG_INF("Product ID: 0x%" PRIx8, product_id);
-	if (product_id != PAW3212_PRODUCT_ID) {
+	if (product_id != 0X2A) {
 		LOG_ERR("Invalid product ID (0x%" PRIx8")!", product_id);
 		return -EIO;
 	}
@@ -466,35 +362,35 @@ static int paw3212_async_init_verify_id(struct paw3212_data *dev_data)
 
 static int paw3212_async_init_configure(struct paw3212_data *dev_data)
 {
-	int err;
 
-	err = reg_write(dev_data, PAW3212_REG_WRITE_PROTECT, PAW3212_WPMAGIC);
-	if (!err) {
-		u8_t mouse_option = 0;
+    	reg_write(dev_data,0x0D,0x81);
+	reg_write(dev_data,0x47,0x52);
+	reg_write(dev_data,0x48,0x68);
+	reg_write(dev_data,0x49,0x20);
+	reg_write(dev_data,0x6D,0x41);
+	reg_write(dev_data,0x6E,0xA0);
+	reg_write(dev_data,0x70,0x85);
+	reg_write(dev_data,0x71,0x64);
+	reg_write(dev_data,0x72,0x46);
+	reg_write(dev_data,0x73,0x37);
+	reg_write(dev_data,0x74,0x41);
+	reg_write(dev_data,0x75,0x28);
+	reg_write(dev_data,0x76,0x16);
+	reg_write(dev_data,0x77,0x0F);
+	reg_write(dev_data,0x64,0xF0);
+	reg_write(dev_data,0x03,0x03);
+	reg_write(dev_data,0x48,0x60);
 
-		if (IS_ENABLED(CONFIG_PAW3212_ORIENTATION_90)) {
-			mouse_option |= PAW3212_MOUSE_OPT_XY_SWAP |
-					PAW3212_MOUSE_OPT_Y_INV;
-		} else if (IS_ENABLED(CONFIG_PAW3212_ORIENTATION_180)) {
-			mouse_option |= PAW3212_MOUSE_OPT_Y_INV |
-					PAW3212_MOUSE_OPT_X_INV;
-		} else if (IS_ENABLED(CONFIG_PAW3212_ORIENTATION_270)) {
-			mouse_option |= PAW3212_MOUSE_OPT_XY_SWAP |
-					PAW3212_MOUSE_OPT_X_INV;
-		}
+	uint8_t databyte = 0;
 
-		if (IS_ENABLED(CONFIG_PAW3212_12_BIT_MODE)) {
-			mouse_option |= PAW3212_MOUSE_OPT_12BITMODE;
-		}
+	reg_read(dev_data, 0x41, &databyte);
+	//databyte |= 0x80;
+	databyte &= ~(0x40);
+	reg_write(dev_data,0x41,databyte);
 
-		err = reg_write(dev_data, PAW3212_REG_MOUSE_OPTION,
-				mouse_option);
-	}
-	if (!err) {
-		err = reg_write(dev_data, PAW3212_REG_WRITE_PROTECT, 0);
-	}
 
-	return err;
+    	return 0;
+
 }
 
 static void paw3212_async_init(struct k_work *work)
@@ -644,17 +540,11 @@ static int paw3212_sample_fetch(struct device *dev, enum sensor_channel chan)
 		return err;
 	}
 
-	if ((motion_status & PAW3212_MOTION_STATUS_MOTION) != 0) {
+	if ((motion_status & 0x80) != 0) {
 		u8_t x_low;
 		u8_t y_low;
 
-		if ((motion_status & PAW3212_MOTION_STATUS_DXOVF) != 0) {
-			LOG_WRN("X delta overflowed");
-		}
-		if ((motion_status & PAW3212_MOTION_STATUS_DYOVF) != 0) {
-			LOG_WRN("Y delta overflowed");
-		}
-
+	
 		err = reg_read(dev_data, PAW3212_REG_DELTA_X_LOW, &x_low);
 		if (err) {
 			LOG_ERR("Cannot read X delta");
@@ -670,18 +560,18 @@ static int paw3212_sample_fetch(struct device *dev, enum sensor_channel chan)
 		if (IS_ENABLED(CONFIG_PAW3212_12_BIT_MODE)) {
 			u8_t xy_high;
 
-			err = reg_read(dev_data, PAW3212_REG_DELTA_XY_HIGH,
+			err = reg_read(dev_data, 0x0C,
 				       &xy_high);
 			if (err) {
 				LOG_ERR("Cannot read XY delta high");
 				return err;
 			}
 
-			dev_data->x = PAW3212_DELTA_X(xy_high, x_low);
-			dev_data->y = PAW3212_DELTA_Y(xy_high, y_low);
+			dev_data->y = -PAW3212_DELTA_X(xy_high, x_low);
+			dev_data->x = PAW3212_DELTA_Y(xy_high, y_low);
 		} else {
-			dev_data->x = (s8_t)x_low;
-			dev_data->y = (s8_t)y_low;
+			dev_data->y = -(s8_t)x_low;
+			dev_data->x = (s8_t)y_low;
 		}
 	} else {
 		dev_data->x = 0;
@@ -766,7 +656,7 @@ static int paw3212_attr_set(struct device *dev, enum sensor_channel chan,
 			    enum sensor_attribute attr,
 			    const struct sensor_value *val)
 {
-	struct paw3212_data *dev_data = &paw3212_data;
+	/* struct paw3212_data *dev_data = &paw3212_data;
 	int err;
 
 	ARG_UNUSED(dev);
@@ -808,7 +698,8 @@ static int paw3212_attr_set(struct device *dev, enum sensor_channel chan,
 		return -ENOTSUP;
 	}
 
-	return err;
+	return err; */
+	return 0;
 }
 
 static const struct sensor_driver_api paw3212_driver_api = {
