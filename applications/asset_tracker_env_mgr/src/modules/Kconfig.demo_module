@@ -1,0 +1,13 @@
+#
+# Copyright (c) 2018 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-BSD-5-Clause-Nordic
+#
+
+menu "Demo module"
+
+module = DEMO_MODULE
+module-str = Demo module
+source "subsys/logging/Kconfig.template.log_config"
+
+endmenu

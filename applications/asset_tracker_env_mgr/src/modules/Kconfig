@@ -1,0 +1,13 @@
+#
+# Copyright (c) 2018 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-BSD-5-Clause-Nordic
+#
+
+rsource "Kconfig.power_manager"
+rsource "Kconfig.led_state"
+rsource "Kconfig.shell"
+rsource "Kconfig.watchdog"
+rsource "Kconfig.config"
+rsource "Kconfig.config_channel"
+rsource "Kconfig.demo_module"

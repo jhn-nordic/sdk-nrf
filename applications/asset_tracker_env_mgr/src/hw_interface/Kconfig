@@ -1,0 +1,18 @@
+#
+# Copyright (c) 2018 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-BSD-5-Clause-Nordic
+#
+
+menu "Hardware interface modules"
+
+rsource "Kconfig.buttons"
+rsource "Kconfig.click_detector"
+rsource "Kconfig.selector"
+rsource "Kconfig.leds"
+
+module = DESKTOP_BOARD
+module-str = board module
+source "subsys/logging/Kconfig.template.log_config"
+
+endmenu
