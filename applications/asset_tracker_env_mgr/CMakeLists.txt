@@ -54,5 +54,7 @@ zephyr_library_include_directories(
 add_subdirectory(src/events)
 add_subdirectory(src/hw_interface)
 add_subdirectory(src/modules)
+add_subdirectory(src/cloud_codec)
+
 
 

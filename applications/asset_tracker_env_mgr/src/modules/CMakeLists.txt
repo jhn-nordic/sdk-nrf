@@ -20,3 +20,4 @@ target_sources_ifdef(CONFIG_DESKTOP_WATCHDOG_ENABLE
 		     app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/watchdog.c)
 
 target_sources(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/demo_module.c)
+target_sources(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lte_module.c)
