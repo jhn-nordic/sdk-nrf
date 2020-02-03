@@ -12,7 +12,7 @@
 #include <lte_lc.h>
 
 #define HOST "ntp.uio.no"
-#define PORT 123
+#define PORT 8888
 #define RECV_BUF_SIZE 1024
 #define SEND_BUF_SIZE 1024
 
@@ -40,6 +40,7 @@ struct ntp_format {
 	u32_t xmt_frac; /* transmit timestamp */
 };
 
+char temp23[]="TEMP:23.3";
 int blocking_recv(int fd, u8_t *buf, u32_t size, u32_t flags)
 {
 	int err;
@@ -117,17 +118,24 @@ void setup_psm(void)
 
 void app_udp_start(void)
 {
-	struct addrinfo *res;
+	//struct addrinfo *res;
 	socklen_t addrlen = sizeof(struct sockaddr_storage);
-
-	int err = getaddrinfo(HOST, NULL, NULL, &res);
-	if (err < 0) {
-		printk("getaddrinfo err: %d\n\r", err);
-		return;
-	}
-	((struct sockaddr_in *)res->ai_addr)->sin_port = htons(PORT);
+	int err=0;
+	// int err = getaddrinfo(HOST, NULL, NULL, &res);
+	// if (err < 0) {
+	// 	printk("getaddrinfo err: %d\n\r", err);
+	// 	return;
+	// }
+	// ((struct sockaddr_in *)res->ai_addr)->sin_port = htons(PORT);
+	struct sockaddr_in host_addr;
 	struct sockaddr_in local_addr;
-
+	inet_pton(AF_INET, "18.196.48.166",
+		  &host_addr.sin_addr);
+	// inet_pton(AF_INET, "35.196.248.136",
+	// 	  &host_addr.sin_addr);
+		  
+	host_addr.sin_port = htons(PORT);
+	host_addr.sin_family = AF_INET;
 	local_addr.sin_family = AF_INET;
 	local_addr.sin_port = htons(0);
 	local_addr.sin_addr.s_addr = 0;
@@ -145,8 +153,8 @@ void app_udp_start(void)
 		goto error;
 	}
 
-	err = connect(client_fd, (struct sockaddr *)res->ai_addr,
-		      sizeof(struct sockaddr_in));
+	err = connect(client_fd, (struct sockaddr *)&host_addr,
+		      sizeof(host_addr));
 	if (err < 0) {
 		printk("connect err: %d errno: %d\n\r", err, errno);
 		goto error;
@@ -157,7 +165,7 @@ void app_udp_start(void)
 
 	/*err = sendto(client_fd, send_buf, sizeof(send_buf), 0,
 		     (struct sockaddr *)res->ai_addr, addrlen);*/
-	err = send(client_fd, send_buf, sizeof(send_buf), 0);
+	err = send(client_fd, temp23, sizeof(temp23)-1, 0);
 	printk("sendto ret: %d\n\r", err);
 	if (err < 0) {
 		printk("sendto err: %d errno: %d\n\r", err, errno);
@@ -165,7 +173,7 @@ void app_udp_start(void)
 	}
 
 	err = blocking_recvfrom(client_fd, recv_buf, sizeof(recv_buf), 0,
-				(struct sockaddr *)res->ai_addr, &addrlen);
+				(struct sockaddr *)&host_addr.sin_addr, &addrlen);
 	if (err < 0) {
 		printk("recvfrom err: %d errno: %d\n\r", err, errno);
 		goto error;
@@ -178,7 +186,7 @@ void app_udp_start(void)
 	}
 
 error:
-	freeaddrinfo(res);
+	//freeaddrinfo(res);
 	printk("Finished\n");
 	(void)close(client_fd);
 }
