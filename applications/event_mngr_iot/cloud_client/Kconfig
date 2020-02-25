@@ -1,0 +1,16 @@
+#
+# Copyright (c) 2018 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-BSD-5-Clause-Nordic
+#
+
+menu "nRF52 Desktop"
+rsource "../common/events/Kconfig"
+rsource "../common/hw_interface/Kconfig"
+rsource "../common/modules/Kconfig"
+rsource "src/modules/Kconfig.cloud_client_module"
+endmenu
+
+menu "Zephyr Kernel"
+source "$ZEPHYR_BASE/Kconfig.zephyr"
+endmenu

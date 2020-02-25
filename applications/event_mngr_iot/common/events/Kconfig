@@ -1,0 +1,47 @@
+#
+# Copyright (c) 2019 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-BSD-5-Clause-Nordic
+#
+
+if LOG
+
+menu "Event options"
+
+comment "Initially logged events"
+
+config DESKTOP_INIT_LOG_BATTERY_STATE_EVENT
+	bool "Battery state event"
+	default y
+
+config DESKTOP_INIT_LOG_BATTERY_LEVEL_EVENT
+	bool "Battery level event"
+	default y
+
+config DESKTOP_INIT_LOG_BUTTON_EVENT
+	bool "Button event"
+	default y
+
+config DESKTOP_INIT_LOG_LED_EVENT
+	bool "LED event"
+	default y
+
+config DESKTOP_INIT_LOG_LED_READY_EVENT
+	bool "LED ready event"
+	default y
+
+config DESKTOP_INIT_LOG_MODULE_STATE_EVENT
+	bool "Module state event"
+	default y
+
+config DESKTOP_INIT_LOG_POWER_DOWN_EVENT
+	bool "Power down event"
+	default y
+
+config DESKTOP_INIT_LOG_WAKE_UP_EVENT
+	bool "Wake up event"
+	default y
+
+endmenu
+
+endif
