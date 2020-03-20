@@ -31,14 +31,17 @@ manifest:
       url-base: https://github.com/ARMmbed
     - name: civetweb
       url-base: https://github.com/civetweb
+    - name: bjda-thingy91
+      url-base: https://github.com/bjda-thingy91
 
   # The list of external projects for the nRF Connect SDK.
   #
   projects:
     - name: zephyr
-      repo-path: fw-nrfconnect-zephyr
+      repo-path: zephyr
       west-commands: scripts/west-commands.yml
-      revision: 367eec2dd60d4e15ab6b9aff22d33686312997ed
+      remote: bjda-thingy91
+      revision: cherrypick_usb_fixes_tag
     - name: segger
       revision: 6fcf61606d6012d2c44129edc033f59331e268bc
       path: modules/debug/segger
@@ -48,8 +51,9 @@ manifest:
       revision: 3776c158fe138a72c97c187e4d31c81c37884be9
       remote: zephyrproject
     - name: mcuboot
-      repo-path: fw-nrfconnect-mcuboot
-      revision: 60b340765a64cd28b6768b3f5cad724a22c25874
+      repo-path: mcuboot
+      remote: bjda-thingy91
+      revision: cherrypick_usb_enable_tag
       path: bootloader/mcuboot
     - name: mcumgr
       repo-path: fw-nrfconnect-mcumgr
