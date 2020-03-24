@@ -1043,6 +1043,13 @@ static void cycle_cloud_connection(struct k_work *work)
 	int err;
 	s32_t reboot_wait_ms = REBOOT_AFTER_DISCONNECT_WAIT_MS;
 
+	/* Shut down modem and reboot immidiately, avoiding cloud_disconnect */
+	if (IS_ENABLED(CONFIG_REBOOT)) {
+		LOG_INF("Shutting down modem and rebooting...");
+		shutdown_modem();
+		sys_reboot(0);
+	}
+
 	LOG_INF("Disconnecting from cloud...");
 
 	err = cloud_disconnect(cloud_backend);
