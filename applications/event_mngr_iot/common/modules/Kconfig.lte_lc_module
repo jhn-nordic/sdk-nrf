@@ -1,0 +1,25 @@
+#
+# Copyright (c) 2020 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-BSD-5-Clause-Nordic
+#
+
+
+menu "Cloud Client module settings"
+
+config LTE_LC_MODULE_ENABLE
+	bool "Enable LTE LC module"
+	help
+	  Enable the the LTE link control module
+
+if LTE_LC_MODULE_ENABLE
+
+module = LTE_LC_MODULE
+module-str = lte_lc module
+source "subsys/logging/Kconfig.template.log_config"
+
+config POWER_SAVING_MODE_ENABLE
+	bool "Request PSM from cellular network"
+	
+endif
+endmenu

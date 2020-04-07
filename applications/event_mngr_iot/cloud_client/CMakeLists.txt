@@ -43,7 +43,7 @@ zephyr_compile_definitions(_POSIX_C_SOURCE=200809L)
 
 target_sources(app PRIVATE
   src/main.c
-  src/modules/cloud_client_module.c
+  src/modules/app_module.c
   )
 
 # Include application events and configuration headers

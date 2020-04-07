@@ -42,6 +42,13 @@ config DESKTOP_INIT_LOG_WAKE_UP_EVENT
 	bool "Wake up event"
 	default y
 
+config DESKTOP_INIT_LOG_LTE_LC_EVENT
+	bool "LTE lc event"
+	default y
+
+config DESKTOP_INIT_LOG_CLOUDAPI_EVENT
+	bool "Cloudapi event"
+	default y
 endmenu
 
 endif
