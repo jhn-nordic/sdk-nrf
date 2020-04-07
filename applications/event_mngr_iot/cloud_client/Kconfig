@@ -8,7 +8,7 @@ menu "nRF52 Desktop"
 rsource "../common/events/Kconfig"
 rsource "../common/hw_interface/Kconfig"
 rsource "../common/modules/Kconfig"
-rsource "src/modules/Kconfig.cloud_client_module"
+rsource "src/modules/Kconfig.app_module"
 endmenu
 
 menu "Zephyr Kernel"

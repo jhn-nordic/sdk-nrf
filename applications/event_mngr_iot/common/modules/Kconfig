@@ -7,4 +7,6 @@
 rsource "Kconfig.power_manager"
 rsource "Kconfig.led_state"
 rsource "Kconfig.watchdog"
+rsource "Kconfig.lte_lc_module"
+rsource "Kconfig.cloudapi_module"
 
