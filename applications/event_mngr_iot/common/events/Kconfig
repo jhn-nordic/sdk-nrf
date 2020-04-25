@@ -49,6 +49,10 @@ config DESKTOP_INIT_LOG_LTE_LC_EVENT
 config DESKTOP_INIT_LOG_CLOUDAPI_EVENT
 	bool "Cloudapi event"
 	default y
+
+config DESKTOP_INIT_LOG_GPS_EVENT
+	bool "GPS event"
+	default y
 endmenu
 
 endif

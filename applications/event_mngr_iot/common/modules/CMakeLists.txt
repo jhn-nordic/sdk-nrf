@@ -18,3 +18,7 @@ target_sources_ifdef(CONFIG_LTE_LC_MODULE_ENABLE
 
 target_sources_ifdef(CONFIG_CLOUDAPI_MODULE_ENABLE
 		     app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cloudapi_module.c)
+
+target_sources_ifdef(CONFIG_GPS_MODULE_ENABLE
+		     app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/gps_module.c)
+
