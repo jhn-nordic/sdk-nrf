@@ -9,4 +9,4 @@ rsource "Kconfig.led_state"
 rsource "Kconfig.watchdog"
 rsource "Kconfig.lte_lc_module"
 rsource "Kconfig.cloudapi_module"
-
+rsource "Kconfig.gps_module"

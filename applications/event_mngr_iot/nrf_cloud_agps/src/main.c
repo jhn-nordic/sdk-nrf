@@ -19,7 +19,7 @@ void main(void)
 	if(!IS_ENABLED(CONFIG_SERIAL) && IS_ENABLED(CONFIG_BOOTLOADER_MCUBOOT)) {
 		nrf_uarte_disable(NRF_UARTE0);
 	}
-
+	
 	if (event_manager_init()) {
 		LOG_ERR("Event manager not initialized");
 	} else {
