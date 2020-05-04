@@ -33,6 +33,14 @@ struct gps_start_event {
 };
 
 EVENT_TYPE_DECLARE(gps_start_event);
+
+struct gps_stop_event {
+	struct event_header header;
+
+};
+
+EVENT_TYPE_DECLARE(gps_stop_event)
+
 #ifdef __cplusplus
 }
 #endif

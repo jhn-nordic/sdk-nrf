@@ -22,6 +22,10 @@ config DESKTOP_INIT_LOG_BUTTON_EVENT
 	bool "Button event"
 	default y
 
+config DESKTOP_INIT_LOG_CLICK_EVENT
+	bool "Click event"
+	default y
+
 config DESKTOP_INIT_LOG_LED_EVENT
 	bool "LED event"
 	default y

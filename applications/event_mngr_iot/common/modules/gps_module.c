@@ -71,6 +71,16 @@ static bool event_handler(const struct event_header *eh)
 			event->gps_cfg.interval, event->gps_cfg.timeout);
 		return false;
 	}
+	if (is_gps_stop_event(eh))
+	{
+		int err;
+		err = gps_stop(gps_dev);
+		if (err) {
+			LOG_ERR("Failed to stop GPS, error: %d", err);
+			return false;
+		}
+		return false;
+	}
 	if (is_wake_up_event(eh)) {
 		return false;
 	}
@@ -89,4 +99,5 @@ EVENT_LISTENER(MODULE, event_handler);
 EVENT_SUBSCRIBE(MODULE, module_state_event);
 EVENT_SUBSCRIBE(MODULE, wake_up_event);
 EVENT_SUBSCRIBE(MODULE, gps_start_event);
+EVENT_SUBSCRIBE(MODULE, gps_stop_event);
 EVENT_SUBSCRIBE_EARLY(MODULE, power_down_event); 

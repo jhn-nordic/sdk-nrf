@@ -20,3 +20,5 @@ target_sources(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lte_lc_event.c)
 target_sources(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cloudapi_event.c)
 
 target_sources(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/gps_event.c)
+
+target_sources(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/click_event.c)

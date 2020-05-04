@@ -83,3 +83,8 @@ EVENT_TYPE_DEFINE(gps_start_event,
 		  IS_ENABLED(CONFIG_DESKTOP_INIT_LOG_GPS_EVENT),
 		  log_gps_start_event,
 		  NULL);
+
+EVENT_TYPE_DEFINE(gps_stop_event,
+		  IS_ENABLED(CONFIG_DESKTOP_INIT_LOG_GPS_EVENT),
+		  NULL,
+		  NULL);
