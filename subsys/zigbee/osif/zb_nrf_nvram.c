@@ -14,7 +14,7 @@
 /* ZBOSS uses two virtual pages in the same size. */
 #define ZBOSS_NVRAM_PAGE_COUNT 2
 /* Size of logical ZBOSS NVRAM page in bytes. */
-#define ZBOSS_NVRAM_PAGE_SIZE (DT_FLASH_AREA_ZBOSS_NVRAM_SIZE \
+#define ZBOSS_NVRAM_PAGE_SIZE (FLASH_AREA_SIZE(zboss_nvram)	\
 			       / ZBOSS_NVRAM_PAGE_COUNT)
 #define PHYSICAL_PAGE_SIZE 0x1000
 BUILD_ASSERT((ZBOSS_NVRAM_PAGE_SIZE % PHYSICAL_PAGE_SIZE) == 0,
@@ -38,13 +38,13 @@ void zb_osif_nvram_init(const zb_char_t *name)
 	ARG_UNUSED(name);
 	int ret;
 
-	ret = flash_area_open(DT_FLASH_AREA_ZBOSS_NVRAM_ID, &fa);
+	ret = flash_area_open(FLASH_AREA_ID(zboss_nvram), &fa);
 	if (ret) {
 		LOG_ERR("Can't open ZBOSS NVRAM flash area");
 	}
 
 #ifdef ZB_PRODUCTION_CONFIG
-	ret = flash_area_open(DT_FLASH_AREA_PRODUCT_CONFIG_ID, &fa_pc);
+	ret = flash_area_open(FLASH_AREA_ID(product_config), &fa_pc);
 	if (ret) {
 		LOG_ERR("Can't open product config flash area");
 	}
