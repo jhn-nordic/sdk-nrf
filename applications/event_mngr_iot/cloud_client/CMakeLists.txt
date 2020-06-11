@@ -11,8 +11,8 @@ if(CMAKE_BUILD_TYPE MATCHES "^ZRelease$")
 endif()
 
 set(NRF_SUPPORTED_BOARDS
-  nrf9160_pca20035ns
-  nrf9160_pca10090ns
+  thingy91_nrf9160ns
+  nrf9160dk_nrf9160ns
   )
 
 set(NRF_SUPPORTED_BUILD_TYPES
@@ -24,7 +24,6 @@ if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE ZDebug)
 endif()
 
-include($ENV{ZEPHYR_BASE}/../nrf/cmake/boilerplate.cmake)
 
 if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/configuration/${BOARD}/dts.overlay")
   set(DTC_OVERLAY_FILE "${CMAKE_CURRENT_SOURCE_DIR}/configuration/${BOARD}/dts.overlay")
@@ -38,8 +37,8 @@ list(APPEND CONF_FILE "configuration/${CMAKE_BUILD_TYPE}.conf")
 ################################################################################
 
 
-include($ENV{ZEPHYR_BASE}/cmake/app/boilerplate.cmake NO_POLICY_SCOPE)
-project(asset_tracker)
+find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
+project(cloud_client_EM_edition)
 zephyr_compile_definitions(PROJECT_NAME=${PROJECT_NAME})
 zephyr_compile_definitions(_POSIX_C_SOURCE=200809L)
 

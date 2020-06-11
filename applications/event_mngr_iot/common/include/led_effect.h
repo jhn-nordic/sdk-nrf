@@ -191,6 +191,38 @@ struct led_effect {
 	}
 
 
+#define _BREATH_PAUSE_SUBSTEPS	1
+#define LED_EFFECT_LED_BREATHE_WITH_PAUSE(_period, _pause, _color)			       \
+	{								       \
+		.steps = ((struct led_effect_step[]) {			       \
+			{						       \
+				.color = _color,			       \
+				.substep_count = _BREATH_SUBSTEPS,	       \
+				.substep_time = ((_period +		       \
+					(_BREATH_SUBSTEPS - 1))		       \
+					/ _BREATH_SUBSTEPS),		       \
+			},						       \
+			{						       \
+				.color = _color,			       \
+				.substep_count = 1,			       \
+				.substep_time = _period,		       \
+			},						       \
+			{						       \
+				.color = LED_NOCOLOR(),			       \
+				.substep_count = _BREATH_SUBSTEPS,	       \
+				.substep_time = ((_period +		       \
+					(_BREATH_SUBSTEPS - 1))		       \
+					/ _BREATH_SUBSTEPS),		       \
+			},						       \
+			{						       \
+				.color = LED_NOCOLOR(),			       \
+				.substep_count = _BREATH_PAUSE_SUBSTEPS,       \
+				.substep_time = _pause,			       \
+			},						       \
+		}),							       \
+		.step_count = 4,					       \
+		.loop_forever = true,					       \
+	}
 /** @def LED_CLOCK_BLINK_PERIOD
  *
  * @brief Period of time between color changes while the LED is blinking

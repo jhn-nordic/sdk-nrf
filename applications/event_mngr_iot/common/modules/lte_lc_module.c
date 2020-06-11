@@ -18,10 +18,10 @@ LOG_MODULE_REGISTER(MODULE, CONFIG_LTE_LC_MODULE_LOG_LEVEL);
 #include <net/cloud.h>
 #include <net/socket.h>
 
-static void lte_handler(struct lte_lc_evt *evt)
+static void lte_handler(const struct lte_lc_evt *const evt)
 {
 	struct lte_lc_event *event = new_lte_lc_event();
-	memcpy(&event->event,evt,sizeof(struct lte_lc_event));
+	memcpy(&event->event,evt,sizeof(struct lte_lc_evt));
 	EVENT_SUBMIT(event);
 }
 

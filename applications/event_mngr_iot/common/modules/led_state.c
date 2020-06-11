@@ -8,7 +8,7 @@
 
 #define MODULE led_state
 #include "module_state_event.h"
-
+#include "cloudapi_event.h"
 #include "led_event.h"
 //#include "ble_event.h"
 //#include "battery_event.h"
@@ -96,6 +96,17 @@ static void set_system_state_led(enum led_system_state state)
 	}
 }
 
+static void handle_cloudapi_event(const struct cloudapi_event *event)
+{
+	if(event->event.type == CLOUD_EVT_READY)
+	{
+		set_system_state_led(LED_SYSTEM_STATE_CONNECTED);
+	}
+	else if(event->event.type == CLOUD_EVT_DISCONNECTED)
+	{
+		set_system_state_led(LED_SYSTEM_STATE_ERROR);
+	}
+}
 static bool event_handler(const struct event_header *eh)
 {
 	// if (is_ble_peer_event(eh)) {
@@ -170,12 +181,18 @@ static bool event_handler(const struct event_header *eh)
 
 		if (check_state(event, MODULE_ID(main), MODULE_STATE_READY)) {
 			load_system_state_led();
+			system_state = LED_SYSTEM_STATE_IDLE;
 		} else if (event->state == MODULE_STATE_ERROR) {
 			set_system_state_led(LED_SYSTEM_STATE_ERROR);
 		}
 		return false;
 	}
-
+	if (is_cloudapi_event(eh))
+	{
+		const struct cloudapi_event *event = cast_cloudapi_event(eh);
+		handle_cloudapi_event(event);
+		return false;	
+	}
 	/* If event is unhandled, unsubscribe. */
 	__ASSERT_NO_MSG(false);
 
@@ -184,6 +201,7 @@ static bool event_handler(const struct event_header *eh)
 
 EVENT_LISTENER(MODULE, event_handler);
 EVENT_SUBSCRIBE(MODULE, module_state_event);
+EVENT_SUBSCRIBE(MODULE, cloudapi_event);
 // EVENT_SUBSCRIBE(MODULE, ble_peer_event);
 // EVENT_SUBSCRIBE(MODULE, ble_peer_search_event);
 // EVENT_SUBSCRIBE(MODULE, ble_peer_operation_event);
