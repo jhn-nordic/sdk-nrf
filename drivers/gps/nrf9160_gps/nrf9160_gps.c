@@ -285,51 +285,55 @@ wait:
 			if (operation_blocked) {
 				continue;
 			}
+			printk("%s\n", raw_gps_data.nmea);
+#define GGA_match "$GPGGA,"
+			if (!strncmp(GGA_match, raw_gps_data.nmea, 7))
+			{
+				memcpy(evt.nmea.buf, raw_gps_data.nmea, len);
 
-			memcpy(evt.nmea.buf, raw_gps_data.nmea, len);
+				/* Don't count null terminator. */
+				evt.nmea.len = len - 1;
 
-			/* Don't count null terminator. */
-			evt.nmea.len = len - 1;
+				if (has_fix) {
+					LOG_DBG("NMEA: Position fix");
 
-			if (has_fix) {
-				LOG_DBG("NMEA: Position fix");
+					evt.type = GPS_EVT_NMEA_FIX;
+				} else {
+					evt.type = GPS_EVT_NMEA;
+				}
 
-				evt.type = GPS_EVT_NMEA_FIX;
-			} else {
-				evt.type = GPS_EVT_NMEA;
+				notify_event(dev, &evt);
 			}
-
-			notify_event(dev, &evt);
 			break;
 		case NRF_GNSS_AGPS_DATA_ID:
 			LOG_DBG("A-GPS data update needed");
+			LOG_DBG("BUT I DONT CARE");
+			// evt.type = GPS_EVT_AGPS_DATA_NEEDED;
+			// evt.agps_request.sv_mask_ephe =
+			// 	raw_gps_data.agps.sv_mask_ephe;
+			// evt.agps_request.sv_mask_alm =
+			// 	raw_gps_data.agps.sv_mask_alm;
+			// evt.agps_request.utc =
+			// 	raw_gps_data.agps.data_flags &
+			// 	BIT(NRF_GNSS_AGPS_GPS_UTC_REQUEST) ? 1 : 0;
+			// evt.agps_request.klobuchar =
+			// 	raw_gps_data.agps.data_flags &
+			// 	BIT(NRF_GNSS_AGPS_KLOBUCHAR_REQUEST) ? 1 : 0;
+			// evt.agps_request.nequick =
+			// 	raw_gps_data.agps.data_flags &
+			// 	BIT(NRF_GNSS_AGPS_NEQUICK_REQUEST) ? 1 : 0;
+			// evt.agps_request.system_time_tow =
+			// 	raw_gps_data.agps.data_flags &
+			// 	BIT(NRF_GNSS_AGPS_SYS_TIME_AND_SV_TOW_REQUEST) ?
+			// 	1 : 0;
+			// evt.agps_request.position =
+			// 	raw_gps_data.agps.data_flags &
+			// 	BIT(NRF_GNSS_AGPS_POSITION_REQUEST) ? 1 : 0;
+			// evt.agps_request.integrity =
+			// 	raw_gps_data.agps.data_flags &
+			// 	BIT(NRF_GNSS_AGPS_INTEGRITY_REQUEST) ? 1 : 0;
 
-			evt.type = GPS_EVT_AGPS_DATA_NEEDED;
-			evt.agps_request.sv_mask_ephe =
-				raw_gps_data.agps.sv_mask_ephe;
-			evt.agps_request.sv_mask_alm =
-				raw_gps_data.agps.sv_mask_alm;
-			evt.agps_request.utc =
-				raw_gps_data.agps.data_flags &
-				BIT(NRF_GNSS_AGPS_GPS_UTC_REQUEST) ? 1 : 0;
-			evt.agps_request.klobuchar =
-				raw_gps_data.agps.data_flags &
-				BIT(NRF_GNSS_AGPS_KLOBUCHAR_REQUEST) ? 1 : 0;
-			evt.agps_request.nequick =
-				raw_gps_data.agps.data_flags &
-				BIT(NRF_GNSS_AGPS_NEQUICK_REQUEST) ? 1 : 0;
-			evt.agps_request.system_time_tow =
-				raw_gps_data.agps.data_flags &
-				BIT(NRF_GNSS_AGPS_SYS_TIME_AND_SV_TOW_REQUEST) ?
-				1 : 0;
-			evt.agps_request.position =
-				raw_gps_data.agps.data_flags &
-				BIT(NRF_GNSS_AGPS_POSITION_REQUEST) ? 1 : 0;
-			evt.agps_request.integrity =
-				raw_gps_data.agps.data_flags &
-				BIT(NRF_GNSS_AGPS_INTEGRITY_REQUEST) ? 1 : 0;
-
-			notify_event(dev, &evt);
+			// notify_event(dev, &evt);
 			continue;
 		default:
 			continue;
@@ -456,7 +460,7 @@ static int parse_cfg(struct gps_config *cfg_src,
 	}
 
 	if (cfg_src->delete_agps_data) {
-		cfg_dst->delete_mask = 0xFF;
+		cfg_dst->delete_mask = 0XFF; //NOT USED IN THIS USE CASE (done on stop_gps() instead)
 	}
 
 	set_nmea_mask(&cfg_dst->nmea_mask);
@@ -609,7 +613,7 @@ static int setup(struct device *dev)
 static int stop_gps(struct device *dev, bool is_timeout)
 {
 	struct gps_drv_data *drv_data = dev->driver_data;
-	nrf_gnss_delete_mask_t delete_mask = 0;
+	nrf_gnss_delete_mask_t delete_mask = 0x7f;//63;
 	int retval;
 
 	if (is_timeout) {
@@ -629,7 +633,21 @@ static int stop_gps(struct device *dev, bool is_timeout)
 		LOG_ERR("Failed to stop GPS");
 		return -EIO;
 	}
-
+	struct gps_event evt = {0};
+	evt.type = GPS_EVT_AGPS_DATA_NEEDED;
+			evt.agps_request.sv_mask_ephe =1;
+			evt.agps_request.sv_mask_alm =1;
+			evt.agps_request.utc =
+				1;
+			evt.agps_request.klobuchar =
+				1;
+			evt.agps_request.nequick =1;
+			evt.agps_request.system_time_tow =1;
+			evt.agps_request.position =
+				1;
+			evt.agps_request.integrity =
+			1;
+			notify_event(dev, &evt);
 	return 0;
 }
 

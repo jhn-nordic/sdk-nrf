@@ -375,13 +375,13 @@ static void send_agps_request(struct k_work *work)
 	static s64_t last_request_timestamp;
 
 /* Request A-GPS data no more often than every hour (time in milliseconds). */
-#define AGPS_UPDATE_PERIOD (60 * 60 * 1000)
+// #define AGPS_UPDATE_PERIOD (60 * 60 * 1000)
 
-	if ((last_request_timestamp != 0) &&
-	    (k_uptime_get() - last_request_timestamp) < AGPS_UPDATE_PERIOD) {
-		LOG_WRN("A-GPS request was sent less than 1 hour ago");
-		return;
-	}
+// 	if ((last_request_timestamp != 0) &&
+// 	    (k_uptime_get() - last_request_timestamp) < AGPS_UPDATE_PERIOD) {
+// 		LOG_WRN("A-GPS request was sent less than 1 hour ago");
+// 		return;
+// 	}
 
 	LOG_INF("Sending A-GPS request");
 
@@ -635,8 +635,8 @@ static void gps_handler(struct device *dev, struct gps_event *evt)
 	case GPS_EVT_SEARCH_TIMEOUT:
 		LOG_INF("GPS_EVT_SEARCH_TIMEOUT");
 		gps_control_set_active(false);
-		LOG_INF("GPS will be attempted again in %d seconds",
-			gps_control_get_gps_reporting_interval());
+		LOG_INF("GPS will be started in %d seconds", CONFIG_GPS_CONTROL_FIX_CHECK_INTERVAL);
+		gps_control_start(1000*CONFIG_GPS_CONTROL_FIX_CHECK_INTERVAL);
 		break;
 	case GPS_EVT_PVT:
 		/* Don't spam logs */
@@ -662,8 +662,8 @@ static void gps_handler(struct device *dev, struct gps_event *evt)
 
 		ui_led_set_pattern(UI_LED_GPS_FIX);
 		gps_control_set_active(false);
-		LOG_INF("GPS will be started in %d seconds",
-			gps_control_get_gps_reporting_interval());
+		LOG_INF("GPS will be started in %d seconds", CONFIG_GPS_CONTROL_FIX_CHECK_INTERVAL);
+		gps_control_start(1000*CONFIG_GPS_CONTROL_FIX_CHECK_INTERVAL);
 
 		k_work_submit_to_queue(&application_work_q,
 				       &send_gps_data_work);
@@ -1090,7 +1090,10 @@ static void device_config_send(struct k_work *work)
 	}
 
 	if (gps_cfg_state == CLOUD_CMD_STATE_TRUE) {
-		gps_control_start(0);
+		gps_control_start(60000);
+		k_delayed_work_submit_to_queue(&application_work_q,
+					       &send_agps_request_work,
+					       K_SECONDS(1));
 	}
 }
 
@@ -1586,12 +1589,20 @@ static int modem_configure(void)
 	LOG_INF("Connecting to LTE network.");
 	LOG_INF("This may take several minutes.");
 
+		LOG_INF("Enabling PSM");
+
+	int err = lte_lc_psm_req(true);
+	if (err) {
+		LOG_ERR("PSM request failed, error: %d", err);
+	} else {
+		LOG_INF("PSM enabled");
+	}
 #if defined(CONFIG_LWM2M_CARRIER)
 	/* Wait for the LWM2M carrier library to configure the */
 	/* modem and set up the LTE connection. */
 	k_sem_take(&lte_connected, K_FOREVER);
 #else /* defined(CONFIG_LWM2M_CARRIER) */
-	int err = lte_lc_init_and_connect();
+	err = lte_lc_init_and_connect();
 	if (err) {
 		LOG_ERR("LTE link could not be established.");
 		return err;
