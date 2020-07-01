@@ -1595,12 +1595,20 @@ static int modem_configure(void)
 	LOG_INF("Connecting to LTE network.");
 	LOG_INF("This may take several minutes.");
 
+		LOG_INF("Enabling PSM");
+
+	int err = lte_lc_psm_req(true);
+	if (err) {
+		LOG_ERR("PSM request failed, error: %d", err);
+	} else {
+		LOG_INF("PSM enabled");
+	}
 #if defined(CONFIG_LWM2M_CARRIER)
 	/* Wait for the LWM2M carrier library to configure the */
 	/* modem and set up the LTE connection. */
 	k_sem_take(&lte_connected, K_FOREVER);
 #else /* defined(CONFIG_LWM2M_CARRIER) */
-	int err = lte_lc_init_and_connect();
+	err = lte_lc_init_and_connect();
 	if (err) {
 		LOG_ERR("LTE link could not be established.");
 		return err;
@@ -1819,8 +1827,13 @@ static void lte_handler(const struct lte_lc_evt *const evt)
 #endif /* CONFIG_BSD_LIBRARY */
 }
 
+#include <hal/nrf_uarte.h>
 void main(void)
 {
+	//Workaround for MCUBOOT not cleaning up serial port-
+	if(!IS_ENABLED(CONFIG_SERIAL) && IS_ENABLED(CONFIG_BOOTLOADER_MCUBOOT)) {
+		nrf_uarte_disable(NRF_UARTE0);
+	}
 	LOG_INF("Asset tracker started");
 	k_work_q_start(&application_work_q, application_stack_area,
 		       K_THREAD_STACK_SIZEOF(application_stack_area),
