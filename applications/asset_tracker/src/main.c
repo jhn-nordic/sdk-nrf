@@ -385,15 +385,17 @@ static void send_agps_request(struct k_work *work)
 
 	LOG_INF("Sending A-GPS request");
 
-	err = nrf_cloud_agps_request_all();
-	if (err) {
-		LOG_ERR("A-GPS request failed, error: %d", err);
-		return;
-	}
+    LOG_INF("NO I AM NOT");
 
-	last_request_timestamp = k_uptime_get();
+	// err = nrf_cloud_agps_request_all();
+	// if (err) {
+	// 	LOG_ERR("A-GPS request failed, error: %d", err);
+	// 	return;
+	// }
 
-	LOG_INF("A-GPS request sent");
+	// last_request_timestamp = k_uptime_get();
+
+	// LOG_INF("A-GPS request sent");
 #endif /* defined(CONFIG_NRF_CLOUD_AGPS) */
 }
 

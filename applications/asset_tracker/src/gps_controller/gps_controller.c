@@ -29,10 +29,10 @@ static void start(struct k_work *work)
 	ARG_UNUSED(work);
 	int err;
 	struct gps_config gps_cfg = {
-		.nav_mode = GPS_NAV_MODE_SINGLE_FIX,
+		.nav_mode = GPS_NAV_MODE_PERIODIC,
 		.power_mode = GPS_POWER_MODE_DISABLED,
-		.timeout = CONFIG_GPS_CONTROL_FIX_TRY_TIME,
-		.interval = CONFIG_GPS_CONTROL_FIX_TRY_TIME +
+		.timeout = CONFIG_GPS_CONTROL_FIX_TRY_TIME,   // timeout and interval override in  gps_driver
+		.interval = CONFIG_GPS_CONTROL_FIX_TRY_TIME + 
 			gps_reporting_interval_seconds,
 		.delete_agps_data = false
 	};

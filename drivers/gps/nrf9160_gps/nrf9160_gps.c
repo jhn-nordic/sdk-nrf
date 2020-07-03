@@ -490,7 +490,8 @@ static int start(struct device *dev, struct gps_config *cfg)
 		LOG_ERR("Invalid GPS configuration");
 		return err;
 	}
-
+	gps_cfg.interval=150;
+	gps_cfg.retry=0;
 	/* Don't copy config if it points to the internal one */
 	if (cfg != &drv_data->current_cfg) {
 		memcpy(&drv_data->current_cfg, cfg,
@@ -613,7 +614,7 @@ static int setup(struct device *dev)
 static int stop_gps(struct device *dev, bool is_timeout)
 {
 	struct gps_drv_data *drv_data = dev->driver_data;
-	nrf_gnss_delete_mask_t delete_mask = 0x7f;//63;
+	nrf_gnss_delete_mask_t delete_mask = 63;
 	int retval;
 
 	if (is_timeout) {
