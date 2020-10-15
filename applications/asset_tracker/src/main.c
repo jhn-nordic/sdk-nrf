@@ -1610,13 +1610,20 @@ static int modem_configure(void)
 	ui_led_set_pattern(UI_LTE_CONNECTING);
 	LOG_INF("Connecting to LTE network.");
 	LOG_INF("This may take several minutes.");
+	LOG_INF("Enabling PSM");
 
+	int err = lte_lc_psm_req(true);
+	if (err) {
+		LOG_ERR("PSM request failed, error: %d", err);
+	} else {
+		LOG_INF("PSM enabled");
+	}
 #if defined(CONFIG_LWM2M_CARRIER)
 	/* Wait for the LWM2M carrier library to configure the */
 	/* modem and set up the LTE connection. */
 	k_sem_take(&lte_connected, K_FOREVER);
 #else /* defined(CONFIG_LWM2M_CARRIER) */
-	int err = lte_lc_init_and_connect();
+	err = lte_lc_init_and_connect();
 	if (err) {
 		LOG_ERR("LTE link could not be established.");
 		return err;
