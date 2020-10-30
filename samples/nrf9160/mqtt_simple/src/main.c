@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: LicenseRef-BSD-5-Clause-Nordic
  */
 
+#include <dk_buttons_and_leds.h>
 #include <zephyr.h>
 #include <stdio.h>
 #include <drivers/uart.h>
@@ -249,8 +250,8 @@ void mqtt_evt_handler(struct mqtt_client *const c,
 			data_print("Received: ", payload_buf,
 				p->message.payload.len);
 			/* Echo back received data */
-			data_publish(&client, MQTT_QOS_1_AT_LEAST_ONCE,
-				payload_buf, p->message.payload.len);
+		//	data_publish(&client, MQTT_QOS_1_AT_LEAST_ONCE,
+		//		payload_buf, p->message.payload.len);
 		} else {
 			printk("mqtt_read_publish_payload: Failed! %d\n", err);
 			printk("Disconnecting MQTT client...\n");
@@ -356,6 +357,15 @@ static int client_init(struct mqtt_client *client)
 {
 	int err;
 
+	char* CONFIG_MQTT_CLIENT_PASSWORD = "PUT_CLIENT_PASSWORD_HERE";
+char* CONFIG_MQTT_CLIENT_USERNAME = "PUT_USERNAME_HERE";
+	struct mqtt_utf8 password;
+	password.utf8 = (uint8_t *)CONFIG_MQTT_CLIENT_PASSWORD;
+	password.size = strlen(CONFIG_MQTT_CLIENT_PASSWORD);
+	struct mqtt_utf8 user_name;
+	user_name.utf8 = (uint8_t *)CONFIG_MQTT_CLIENT_USERNAME;
+	user_name.size = strlen(CONFIG_MQTT_CLIENT_USERNAME);
+
 	mqtt_client_init(client);
 
 	err = broker_init();
@@ -364,13 +374,15 @@ static int client_init(struct mqtt_client *client)
 		return err;
 	}
 
+
 	/* MQTT client configuration */
 	client->broker = &broker;
 	client->evt_cb = mqtt_evt_handler;
 	client->client_id.utf8 = (uint8_t *)CONFIG_MQTT_CLIENT_ID;
 	client->client_id.size = strlen(CONFIG_MQTT_CLIENT_ID);
-	client->password = NULL;
-	client->user_name = NULL;
+	client->password=&password;
+	client->user_name=&user_name;
+
 	client->protocol_version = MQTT_VERSION_3_1_1;
 
 	/* MQTT buffers configuration */
@@ -459,6 +471,28 @@ static void modem_configure(void)
 #endif /* defined(CONFIG_LTE_LINK_CONTROL) */
 }
 
+static void cloud_update_work_fn(struct k_work *work)
+{
+	char payload_buf[100];
+	static int cnt=0;
+	cnt += 5;
+	if(cnt > 50) {
+		cnt=5;
+	}
+	sprintf(payload_buf, "%d",cnt);
+			/* Echo back received data */
+	data_publish(&client, MQTT_QOS_1_AT_LEAST_ONCE,
+				payload_buf, strlen(payload_buf));
+}
+
+static struct k_delayed_work cloud_update_work;
+
+static void button_handler(uint32_t button_states, uint32_t has_changed)
+{
+	if (has_changed & button_states & DK_BTN1_MSK) {
+		k_delayed_work_submit(&cloud_update_work, K_NO_WAIT);
+	}
+}
 void main(void)
 {
 	int err;
@@ -472,6 +506,11 @@ void main(void)
 		return;
 	}
 #endif /* defined(CONFIG_MQTT_LIB_TLS) */
+	k_delayed_work_init(&cloud_update_work, cloud_update_work_fn);
+	err = dk_buttons_init(button_handler);
+	if (err) {
+		printk("dk_buttons_init, error: %d", err);
+	}
 
 	modem_configure();
 
@@ -501,6 +540,7 @@ void main(void)
 		}
 
 		err = mqtt_live(&client);
+		printk("ping\n");
 		if ((err != 0) && (err != -EAGAIN)) {
 			printk("ERROR: mqtt_live %d\n", err);
 			break;
