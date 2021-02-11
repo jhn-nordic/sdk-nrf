@@ -555,8 +555,7 @@ static void on_sub_state_cloud_connected(struct cloud_msg_data *msg)
 	}
 
 	if (IS_EVENT(msg, data, DATA_EVT_UI_DATA_SEND)) {
-		// ui_data_send(&msg->module.data);
-		// cloud_wrap_disconnect();
+		ui_data_send(&msg->module.data);
 	}
 }
 
