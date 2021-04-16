@@ -37,6 +37,7 @@ config CLOUD_CONNECT_RETRIES
 	  send out a reboot request event.
 
 rsource "../cloud/Kconfig"
+rsource "../cloud/mqtt_backend/Kconfig"
 
 endif # CLOUD_MODULE
 
