@@ -155,6 +155,16 @@ int mqtt_backend_input(void);
  */
 int mqtt_backend_ping(void);
 
+/** @brief Subscribe to custom topic
+ * 
+ *  @param[in] topic Pointer to a struct containing the topic information
+ *
+ *  @return 0 If successful.
+ *            Otherwise, a (negative) error code is returned.
+ */
+int mqtt_backend_subscribe(const struct mqtt_backend_topic_data *const topic);
+
+
 #ifdef __cplusplus
 }
 #endif

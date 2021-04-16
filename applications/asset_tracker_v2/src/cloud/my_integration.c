@@ -53,8 +53,6 @@ static int populate_app_endpoint_topics(void)
 		return -ENOMEM;
 	}
 
-
-
 	err = snprintf(messages_topic, sizeof(messages_topic), MESSAGES_TOPIC,
 		       client_id_buf);
 	if (err != MESSAGES_TOPIC_LEN) {
@@ -83,7 +81,13 @@ void mqtt_backed_event_handler(const struct mqtt_backend_evt *const evt)
 		break;
 	case MQTT_BACKEND_EVT_CONNECTED:
 		LOG_DBG("MQTT_BACKEND_EVT_CONNECTED");
+		const struct mqtt_backend_topic_data sub_topic = {
+			.str = cfg_topic,
+			.len = CFG_TOPIC_LEN,
+		};
+		mqtt_backend_subscribe(&sub_topic);
 		break;
+		
 	case MQTT_BACKEND_EVT_READY:
 		LOG_DBG("MQTT_BACKEND_EVT_READY");
 		cloud_wrap_evt.type = CLOUD_WRAP_EVT_CONNECTED;

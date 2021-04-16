@@ -332,7 +332,28 @@ int mqtt_backend_init(const struct mqtt_backend_config *const config,
 	return 0;
 }
 
+int mqtt_backend_subscribe(const struct mqtt_backend_topic_data *const topic)
+{
+	struct mqtt_topic subscribe_topic = {
+		.topic = {
+			.utf8 = topic->str,
+			.size = topic->len
+		},
+		.qos = MQTT_QOS_1_AT_LEAST_ONCE
+	};
 
+	const struct mqtt_subscription_list subscription_list = {
+		.list = &subscribe_topic,
+		.list_count = 1,
+		.message_id = 1234
+	};
+
+	LOG_INF("Subscribing to: %s len %u", topic->str,
+		topic->len);
+
+	return mqtt_subscribe(&client, &subscription_list);
+
+}
 
 void mqtt_backend_poll(void)
 {
