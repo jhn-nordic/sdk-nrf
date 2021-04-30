@@ -1,0 +1,11 @@
+/* Definitions for optional metrics. */
+
+#ifdef CONFIG_MEMFAULT_NCS_STACK_METRICS
+MEMFAULT_METRICS_KEY_DEFINE(at_cmd_unused_stack, kMemfaultMetricType_Unsigned)
+MEMFAULT_METRICS_KEY_DEFINE(connection_poll_unused_stack, kMemfaultMetricType_Unsigned)
+#endif /* CONFIG_MEMFAULT_NCS_STACK_METRICS */
+
+#ifdef CONFIG_MEMFAULT_NCS_LTE_METRICS
+MEMFAULT_METRICS_KEY_DEFINE(lte_time_to_connect, kMemfaultMetricType_Timer)
+MEMFAULT_METRICS_KEY_DEFINE(lte_connection_loss_count, kMemfaultMetricType_Unsigned)
+#endif /* CONFIG_MEMFAULT_NCS_LTE_METRICS */
