@@ -18,7 +18,7 @@
 extern "C" {
 #endif
 
-/** @defgroup nrf_cloud_agps nRF Cloud AGPS
+/** @defgroup nrf_cloud_agps nRF Cloud A-GPS
  * @{
  */
 
@@ -73,7 +73,7 @@ int nrf_cloud_agps_get_last_cell_location(double *const lat,
  */
 int nrf_cloud_agps_process(const char *buf, size_t buf_len, const int *socket);
 
-/**@brief Query which AGPS elements were actually received
+/**@brief Query which A-GPS elements were actually received
  *
  * @param received_elements return copy of requested elements received
  * since agps request made
@@ -82,7 +82,7 @@ void nrf_cloud_agps_processed(struct gps_agps_request *received_elements);
 
 /**@brief Query whether A-GPS data has been requested from cloud
  *
- * @return true if request is outstanding.
+ * @return True if request is outstanding.
  */
 bool nrf_cloud_agps_request_in_progress(void);
 

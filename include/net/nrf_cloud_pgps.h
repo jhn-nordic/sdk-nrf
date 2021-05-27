@@ -8,7 +8,7 @@
 #define NRF_CLOUD_PGPS_H_
 
 /** @file nrf_cloud_pgps.h
- * @brief Module to provide nRF Cloud P-GPS support to nRF9160 SiP.
+ * @brief Module to provide nRF Cloud Predicted GPS (P-GPS) support to nRF9160 SiP.
  */
 
 #include <zephyr.h>
@@ -28,20 +28,26 @@ struct nrf_cloud_pgps_prediction;
 struct gps_pgps_request {
 	/** Number of predictions desired. */
 	uint16_t prediction_count;
-	/** Validity time per prediction, in minutes. */
+	/** Validity time per prediction, in minutes. Valid range 120 to 480. */
 	uint16_t prediction_period_min;
 	/** Number of days since GPS time began on 6 Jan 1980 for the
 	 * start of the first prediction desired.
 	 */
 	uint16_t gps_day;
 	/** Number of seconds since the start of this GPS day for the
-	 * start of the first prediction desired.
+	 * start of the first prediction desired.  Valid range 0 to 86399.
 	 */
 	uint32_t gps_time_of_day;
 } __packed;
 
-#define EAPPROXIMATE	8000 /* current time unknown; using first prediction */
-#define ELOADING	8001 /* not found but loading in progress */
+/** @brief P-GPS error code: current time unknown; using first prediction */
+#define EAPPROXIMATE	8000
+/** @brief P-GPS error code: not found but loading in progress */
+#define ELOADING	8001
+
+/** @brief Value to mark the ephemeris as unavailable for satellites for which
+ * no predictions are available from the cloud.
+ */
 #define NRF_CLOUD_PGPS_EMPTY_EPHEM_HEALTH (0xff)
 
 /** @brief P-GPS event passed to the registered pgps_event_handler. */
@@ -73,10 +79,9 @@ typedef void (*pgps_event_handler_t)(enum nrf_cloud_pgps_event event,
 struct nrf_cloud_pgps_init_param {
 	/** Event handler that is registered with the module. */
 	pgps_event_handler_t event_handler;
-	/** Flash */
-	/** Flash storage address. */
+	/** Flash storage address. Must be on a Flash page boundary. */
 	uint32_t storage_base;
-	/** Flash storage size. */
+	/** Flash storage size. Must be a multiple of a Flash page in size, in bytes. */
 	uint32_t storage_size;
 };
 
@@ -94,7 +99,9 @@ void nrf_cloud_pgps_set_location_normalized(int32_t latitude, int32_t longitude)
 
 /**@brief Update the storage of the most recent known location in degrees.
  * This will be injected along with the current time and relevant predicted
- * ephemerii to the GPS unit in order to get the fastest possible fix.
+ * ephemerides to the GPS unit in order to get the fastest possible fix, when
+ * the P-GPS subsystem is built with A-GPS disabled, or when A-GPS data is
+ * unavailable due to lack of a cloud connection.
  * Current time is also stored.
  *
  * @param latitude Current latitude in degrees.
@@ -103,7 +110,8 @@ void nrf_cloud_pgps_set_location_normalized(int32_t latitude, int32_t longitude)
 void nrf_cloud_pgps_set_location(double latitude, double longitude);
 
 /**@brief Update the storage of the leap second offset between GPS time
- * and UTC.
+ * and UTC. This called automatically by the A-GPS subsystem (if enabled)
+ * when it receives a UTC assistance element, setting leap_seconds to  the delta_tls field.
  *
  * @param leap_seconds Offset in seconds.
  */
@@ -132,8 +140,11 @@ int nrf_cloud_pgps_find_prediction(struct nrf_cloud_pgps_prediction **prediction
 
 /**@brief Requests specified P-GPS data from nRF Cloud.
  *
- * @param request Pointer to structure containing specified P-GPS data to be
- * requested.
+ * @param request Pointer to structure specifying what P-GPS data is desired.
+ * The request may fail if there no cloud connection; if the specified GPS
+ * day and GPS time of day is in the past or more than 2 weeks in the future;
+ * if the GPS time of day is larger than 86339; or if the prediction_period_min
+ * field is not within the range 120 to 480.
  *
  * @return 0 if successful, otherwise a (negative) error code.
  */
@@ -154,10 +165,11 @@ int nrf_cloud_pgps_request_all(void);
  */
 int nrf_cloud_pgps_process(const char *buf, size_t buf_len);
 
-/**@brief Injects binary P-GPS data to the modem.
+/**@brief Injects binary P-GPS data to the modem. If request is NULL,
+ * it is assumed that only ephemerides assistance should be injected.
  *
  * @param p Pointer to a prediction.
- * @param request Which assistance elements the modem needs.
+ * @param request Which assistance elements the modem needs. May be NULL.
  * @param socket Pointer to GNSS socket to which P-GPS data will be injected.
  * If NULL, the nRF9160 GPS driver is used to inject the data.
  *
@@ -167,13 +179,14 @@ int nrf_cloud_pgps_inject(struct nrf_cloud_pgps_prediction *p,
 			  const struct gps_agps_request *request,
 			  const int *socket);
 
-/**@brief Find out of P-GPS update is in progress
+/**@brief Find out if P-GPS update is in progress
  *
- * @return true if request sent but loading not yet completed.
+ * @return True if request sent but loading not yet completed.
  */
 bool nrf_cloud_pgps_loading(void);
 
-/**@brief Download more predictions if it is time.
+/**@brief Download more predictions if less than CONFIG_NRF_CLOUD_PGPS_REPLACEMENT_THRESHOLD
+ * predictions remain which are still valid.
  *
  * @return 0 if successful, otherwise a (negative) error code.
  */
@@ -196,4 +209,4 @@ int nrf_cloud_pgps_init(struct nrf_cloud_pgps_init_param *param);
 #ifdef __cplusplus
 #endif
 
-#endif /* NRF_CLOUD_AGPS_H_ */
+#endif /* NRF_CLOUD_PGPS_H_ */

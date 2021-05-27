@@ -885,10 +885,10 @@ int nrf_cloud_agps_process(const char *buf, size_t buf_len, const int *socket)
 
 	err = k_sem_take(&agps_injection_active, K_FOREVER);
 	if (err) {
-		LOG_ERR("agps injection already active.");
+		LOG_ERR("A-GPS injection already active.");
 		return err;
 	}
-	LOG_DBG("agps_injection_active LOCKED");
+	LOG_DBG("A-GPS_injection_active LOCKED");
 
 	version = buf[NRF_CLOUD_AGPS_BIN_SCHEMA_VERSION_INDEX];
 	parsed_len += NRF_CLOUD_AGPS_BIN_SCHEMA_VERSION_SIZE;
@@ -908,7 +908,7 @@ int nrf_cloud_agps_process(const char *buf, size_t buf_len, const int *socket)
 		gps_dev = device_get_binding("NRF9160_GPS");
 		if (gps_dev == NULL) {
 			LOG_ERR("GPS is not enabled, A-GPS response unhandled");
-			LOG_DBG("agps_inject_active UNLOCKED");
+			LOG_DBG("A-GPS_inject_active UNLOCKED");
 			k_sem_give(&agps_injection_active);
 			return -ENODEV;
 		}
@@ -954,7 +954,7 @@ int nrf_cloud_agps_process(const char *buf, size_t buf_len, const int *socket)
 		}
 	}
 
-	LOG_DBG("agps_inject_active UNLOCKED");
+	LOG_DBG("A-GPS_inject_active UNLOCKED");
 	k_sem_give(&agps_injection_active);
 
 	return err;

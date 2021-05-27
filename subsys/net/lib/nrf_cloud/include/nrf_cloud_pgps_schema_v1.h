@@ -63,7 +63,9 @@ struct nrf_cloud_pgps_header {
 	uint16_t prediction_period_min;
 	int16_t gps_day;
 	int32_t gps_time_of_day;
-	/* struct nrf_cloud_pgps_prediction predictions[]; */
+	/** file header is followed immediately by
+	 *  struct nrf_cloud_pgps_prediction predictions[prediction_count];
+	 */
 } __packed;
 
 struct agps_header {

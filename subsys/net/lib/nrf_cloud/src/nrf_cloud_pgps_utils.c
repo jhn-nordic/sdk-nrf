@@ -240,13 +240,16 @@ void npgps_gps_sec_to_day_time(int64_t gps_sec, uint16_t *gps_day,
 	}
 }
 
-int npgps_get_time(int64_t *gps_sec, uint16_t *gps_day, uint32_t *gps_time_of_day)
+int npgps_get_shifted_time(int64_t *gps_sec,
+			   uint16_t *gps_day, uint32_t *gps_time_of_day,
+			   uint32_t shift)
 {
 	int64_t now;
 	int err;
 
 	err = date_time_now(&now);
 	if (!err) {
+		now += shift * MSEC_PER_SEC;
 		now = utc_to_gps_sec(now, NULL);
 		npgps_gps_sec_to_day_time(now, gps_day, gps_time_of_day);
 		if (gps_sec != NULL) {
@@ -254,6 +257,11 @@ int npgps_get_time(int64_t *gps_sec, uint16_t *gps_day, uint32_t *gps_time_of_da
 		}
 	}
 	return err;
+}
+
+int npgps_get_time(int64_t *gps_sec, uint16_t *gps_day, uint32_t *gps_time_of_day)
+{
+	return npgps_get_shifted_time(gps_sec, gps_day, gps_time_of_day, 0);
 }
 
 int ngps_block_pool_init(uint32_t base_address, int num)

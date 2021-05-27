@@ -34,7 +34,6 @@ extern "C" {
 #define NUM_PREDICTIONS			CONFIG_NRF_CLOUD_PGPS_NUM_PREDICTIONS
 #define NUM_BLOCKS			NUM_PREDICTIONS
 #define BLOCK_SIZE			PGPS_PREDICTION_STORAGE_SIZE
-#define STORAGE_BASE			PM_MCUBOOT_SECONDARY_ADDRESS
 #define NO_BLOCK			-1
 
 struct gps_location {
@@ -56,6 +55,8 @@ int npgps_settings_init(void);
 /* time functions */
 int64_t npgps_gps_day_time_to_sec(uint16_t gps_day, uint32_t gps_time_of_day);
 void npgps_gps_sec_to_day_time(int64_t gps_sec, uint16_t *gps_day, uint32_t *gps_time_of_day);
+int npgps_get_shifted_time(int64_t *gps_sec, uint16_t *gps_day, uint32_t *gps_time_of_day,
+			   uint32_t shift);
 int npgps_get_time(int64_t *gps_sec, uint16_t *gps_day, uint32_t *gps_time_of_day);
 
 /* flash block allocation functions */
