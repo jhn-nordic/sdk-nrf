@@ -17,6 +17,8 @@ target_sources(app PRIVATE src/main.c)
 
 # Include source directory
 target_include_directories(app PRIVATE src)
+zephyr_include_directories(config)
+
 
 # Application directories
 add_subdirectory(src/modules)
