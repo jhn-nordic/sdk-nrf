@@ -4,12 +4,12 @@
 #
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 
-if(CONFIG_BOARD_THINGY91_NRF9160 AND NOT DEFINED CONFIG_MCUBOOT)
+if(CONFIG_BOARD_THINGY91V2V1_NRF9160 AND NOT DEFINED CONFIG_MCUBOOT)
 	zephyr_library()
 	zephyr_library_sources(board_secure.c)
 endif()
 
-if(CONFIG_BOARD_THINGY91_NRF9160_NS)
+if(CONFIG_BOARD_THINGY91V2V1_NRF9160_NS)
 	zephyr_library()
 	zephyr_library_sources(board_nonsecure.c)
 
